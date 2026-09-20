@@ -1,7 +1,9 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useState, type ReactNode } from 'react';
 import type { Lang, Quest, QuestData } from '../types.ts';
 import { isMainScenario } from '../types.ts';
 import { dictName, nameOf } from '../data.ts';
+import { mapUrl } from '../map.ts';
+import { MapPanel } from './MapPanel.tsx';
 import { sectionVar } from '../graph/theme.ts';
 import { markerIconForQuest, markerIconUrl } from '../graph/icons.ts';
 
@@ -64,6 +66,10 @@ function Chips({
 }
 
 export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang, t, onJump, onDependency }: Props) {
+  // Which quest's map is open. Storing the id (instead of a boolean) means selecting
+  // another quest closes the panel on its own, with no effect to keep in sync.
+  const [mapQuest, setMapQuest] = useState<number | null>(null);
+
   if (!quest) {
     return (
       <aside className="detail empty">
@@ -81,6 +87,7 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
   );
 
   const current = nameOf(quest, lang);
+  const placeName = dictName(d.place[String(quest.place)], lang) || '—';
   const altNames = ([
     ['中文', quest.cn],
     ['English', quest.en],
@@ -90,6 +97,10 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
   const prevLabel = quest.prev.length > 1 ? (quest.prevJoin === 2 ? t('panel.or') : t('panel.and')) : null;
   const startName = dictName(d.npc[String(quest.start)], lang);
   const endName = dictName(d.npc[String(quest.end)], lang);
+  const coords =
+    quest.lode && quest.lode.x != null && quest.lode.y != null
+      ? { x: quest.lode.x, y: quest.lode.y, url: mapUrl(quest.mp, quest.lode.x, quest.lode.y) }
+      : null;
 
   return (
     <aside className="detail">
@@ -122,7 +133,7 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
           <dl className="kv-list">
             {quest.patch ? row(t('panel.patch'), <span>Patch {quest.patch}</span>) : null}
             {row(t('panel.expansion'), dictName(d.ex[String(quest.ex)], lang) || '—')}
-            {row(t('panel.region'), dictName(d.place[String(quest.place)], lang) || '—')}
+            {row(t('panel.region'), placeName)}
             {row(t('panel.section'), dictName(d.js[String(quest.js)], lang) || '—')}
             {row(
               t('panel.category'),
@@ -135,11 +146,27 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
                   t('panel.startNpc'),
                   <span>
                     {startName}
-                    <span className="muted">
-                      {' '}
-                      · {dictName(d.place[String(quest.place)], lang)}
-                      {quest.lode && quest.lode.x != null ? ` X:${quest.lode.x} Y:${quest.lode.y}` : ''}
-                    </span>
+                    {/* The area name is part of the map link — "甘戈斯 X:6.4 Y:5.7" reads
+                        as one thing, and it is the whole thing the panel opens on. */}
+                    {coords?.url ? (
+                      <button
+                        type="button"
+                        className="coord-link"
+                        onClick={() => setMapQuest(quest.id)}
+                        title={t('panel.openMap')}
+                      >
+                        {placeName} X:{coords.x} Y:{coords.y}
+                        <span className="coord-go" aria-hidden>
+                          ↗
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="muted">
+                        {' · '}
+                        {placeName}
+                        {coords ? ` X:${coords.x} Y:${coords.y}` : ''}
+                      </span>
+                    )}
                   </span>,
                 )
               : null}
@@ -230,6 +257,16 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
           </button>
         </div>
       </div>
+
+      {mapQuest === quest.id && coords?.url ? (
+        <MapPanel
+          url={coords.url}
+          quest={current}
+          where={`${placeName} X:${coords.x} Y:${coords.y}`}
+          t={t}
+          onClose={() => setMapQuest(null)}
+        />
+      ) : null}
     </aside>
   );
 });

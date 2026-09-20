@@ -5,6 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import { PALETTES, rgbToHex } from '../src/graph/theme.ts';
 import { buildNameIndex, dependencyPath, homePath, parseLocation, resolveRoute } from '../src/route.ts';
+import { mapUrl } from '../src/map.ts';
 import { chooseLang, firstSupportedLang } from '../src/i18n.ts';
 import { applyFilters, buildTaxonomy, dependencyClosure, prerequisiteSet, relatedSet, searchQuests } from '../src/data.ts';
 import { layoutGraph, DEFAULT_X_STEP, DEFAULT_Y_STEP } from '../src/graph/layout.ts';
@@ -387,6 +388,37 @@ console.log('\n=== site icon ===');
     const h = buf.length > 24 ? buf.readUInt32BE(20) : 0;
     check(`${file} is a ${size}x${size} PNG`, buf.subarray(0, 8).equals(PNG_SIG) && w === size && h === size, `${w}x${h}`);
   }
+}
+
+console.log('\n=== interactive map link ===');
+{
+  check(
+    'a map link carries the Map id and the displayed coordinates',
+    mapUrl(603, 6.4, 5.7) === 'https://map.wakingsands.com/#f=mark&id=603&x=6.4&y=5.7',
+    String(mapUrl(603, 6.4, 5.7)),
+  );
+  check('an unknown map produces no link', mapUrl(0, 6.4, 5.7) === null);
+  check('coordinates that were never resolved produce no link', mapUrl(603, NaN, 5.7) === null && mapUrl(603, 6.4, Infinity) === null);
+
+  const withMap = data.quests.filter((q) => q.mp > 0);
+  const withCoords = data.quests.filter((q) => q.lode && q.lode.x != null && q.lode.y != null);
+  const coordsNoMap = withCoords.filter((q) => !(q.mp > 0));
+  console.log(`   ${withMap.length}/${data.quests.length} quests know their map, ${withCoords.length} have coordinates, ${coordsNoMap.length} have coordinates but no map`);
+  check('almost every quest knows which map it starts on', withMap.length / data.quests.length > 0.98, `${withMap.length}`);
+  check('hardly any coordinate is left without a map', coordsNoMap.length < 20, `${coordsNoMap.length}`);
+
+  // 乌尔达哈 / 利姆萨·罗敏萨 / 格里达尼亚 / 伊修加德 are whole cities in the Quest sheet,
+  // each spread over several district maps — the Level table is what resolves those.
+  const cities = data.quests.filter((q) => [39, 51, 27, 62].includes(q.place));
+  check(
+    'city quests resolve to a district map, not to nothing',
+    cities.length > 500 && cities.filter((q) => q.mp > 0).length / cities.length > 0.95,
+    `${cities.filter((q) => q.mp > 0).length}/${cities.length}`,
+  );
+  const maps = [...new Set(withMap.map((q) => q.mp))];
+  check('the ids point at many different maps', maps.length > 100, `${maps.length} maps`);
+  const eagle = data.quests.find((q) => q.id === 69477);
+  check('a known quest points at the map its NPC stands on', eagle.mp === 603, `map ${eagle.mp} at ${eagle.lode.x},${eagle.lode.y}`);
 }
 
 console.log('\n=== layout ===');

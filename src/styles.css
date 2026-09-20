@@ -1166,6 +1166,263 @@ input {
   border-bottom-color: var(--gold);
 }
 
+/* "甘戈斯 X:6.4 Y:5.7" opens the interactive map. It sits inline after the NPC name, so
+   it is a borderless button styled as a link — it has to read as "this is clickable"
+   without turning a definition row into a toolbar. */
+.coord-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: 6px;
+  font: inherit;
+  color: var(--gold);
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px dotted var(--line-strong);
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.coord-link:hover {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold);
+}
+.coord-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.coord-go {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ map -- */
+
+/* The map site answers without X-Frame-Options, so it can live in an iframe; the panel
+   floats over everything, is dragged by its title bar and resized from any edge or
+   corner (both axes independent). The geometry is driven by custom properties
+   (--map-w/--map-h/--map-x/--map-y) so the narrow layout below can override it without
+   fighting inline styles. */
+.map-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  /* Light enough to see the graph around the panel while dragging it out of the way. */
+  background: color-mix(in srgb, var(--bg) 26%, transparent);
+  animation: map-fade 0.15s ease-out;
+}
+@keyframes map-fade {
+  from {
+    opacity: 0;
+  }
+}
+.map-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: var(--map-w, min(760px, calc(100vmin - 48px)));
+  height: var(--map-h, min(760px, calc(100vmin - 48px)));
+  transform: translate(var(--map-x, 0px), var(--map-y, 0px));
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.map-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px 9px 15px;
+  border-bottom: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.map-head.dragging {
+  cursor: grabbing;
+}
+.map-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.map-titles strong {
+  color: var(--gold-bright);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.map-titles span {
+  color: var(--muted);
+  font-size: 0.8438rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-ext {
+  position: relative;
+  /* above the corner grips, or the north-east grip would eat the click */
+  z-index: 3;
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: 0.7813rem;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+.map-ext:hover {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold);
+}
+.map-close {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--field);
+  color: var(--text-dim);
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.map-close:hover {
+  color: var(--gold-bright);
+  border-color: var(--line-strong);
+}
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--bg);
+}
+/* Resize grips: four corners plus four edges. They sit above the iframe, which would
+   otherwise swallow the pointer. */
+.map-resize {
+  position: absolute;
+  z-index: 2;
+  touch-action: none;
+}
+.map-resize.nw,
+.map-resize.ne,
+.map-resize.sw,
+.map-resize.se {
+  width: 16px;
+  height: 16px;
+}
+.map-resize.nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.map-resize.ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+.map-resize.sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+.map-resize.se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+/* Edge grips are long thin strips, so they are easy to hit without hiding the map. */
+.map-resize.n,
+.map-resize.s {
+  left: 16px;
+  right: 16px;
+  height: 5px;
+  cursor: ns-resize;
+}
+.map-resize.w,
+.map-resize.e {
+  top: 16px;
+  bottom: 16px;
+  width: 5px;
+  cursor: ew-resize;
+}
+.map-resize.n {
+  top: 0;
+}
+.map-resize.s {
+  bottom: 0;
+}
+.map-resize.w {
+  left: 0;
+}
+.map-resize.e {
+  right: 0;
+}
+/* A small corner mark, drawn with two borders so it reads at a glance. */
+.map-resize.nw::after,
+.map-resize.ne::after,
+.map-resize.sw::after,
+.map-resize.se::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-right: 2px solid var(--line-strong);
+  border-bottom: 2px solid var(--line-strong);
+}
+.map-resize.nw::after {
+  transform: rotate(180deg);
+}
+.map-resize.ne::after {
+  transform: rotate(270deg);
+}
+.map-resize.sw::after {
+  transform: rotate(90deg);
+}
+/* Edge strips have no permanent mark — they light up under the pointer instead. */
+.map-resize.n:hover,
+.map-resize.s:hover,
+.map-resize.w:hover,
+.map-resize.e:hover {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+.map-resize.nw:hover::after,
+.map-resize.ne:hover::after,
+.map-resize.sw:hover::after,
+.map-resize.se:hover::after {
+  border-color: var(--gold);
+}
+@media (max-width: 780px) {
+  .map-overlay {
+    padding: 0;
+  }
+  /* A phone gets the whole screen: there is no room to drag or resize anything. */
+  .map-panel {
+    width: 100%;
+    height: 100%;
+    transform: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .map-head {
+    cursor: default;
+  }
+  .map-resize {
+    display: none;
+  }
+  .map-titles strong {
+    white-space: normal;
+  }
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

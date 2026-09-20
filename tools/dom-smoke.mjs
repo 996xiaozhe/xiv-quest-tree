@@ -340,6 +340,99 @@ check(
   detail.kv.some((k) => k.includes('马尔夏克') && k.includes('6.4') && k.includes('5.7')),
   detail.kv.find((k) => k.includes('马尔夏克')),
 );
+{
+  // 「甘戈斯 X:6.4 Y:5.7」is one clickable unit, and it opens the map in a floating panel
+  const coord = $('.detail button.coord-link');
+  console.log('   coordinate control:', coord?.textContent.trim());
+  check(
+    'the area name and the coordinates are one clickable control',
+    /甘戈斯\s*X:6\.4\s*Y:5\.7/.test(coord?.textContent ?? ''),
+    String(coord?.textContent),
+  );
+  check('there is no coordinate link that opens a tab any more', !$('.detail a.coord-link'));
+
+  click(coord);
+  await sleep(400);
+  const frame = $('.map-overlay .map-frame');
+  const mapSrc = frame?.getAttribute('src') ?? '';
+  console.log('   map frame:', mapSrc);
+  check('clicking it opens a floating map panel', !!$('.map-overlay') && !!frame, mapSrc);
+  check(
+    'the frame points at the marked map',
+    /^https:\/\/map\.wakingsands\.com\/#f=mark&id=\d+&x=[\d.]+&y=[\d.]+$/.test(mapSrc),
+    mapSrc,
+  );
+  check('the panel offers the map site itself', ($('.map-ext')?.getAttribute('href') ?? '') === mapSrc, String($('.map-ext')?.getAttribute('href')));
+
+  // Square on open, draggable, and resizable on both axes — the geometry lives in
+  // custom properties on the panel so it can be read back here.
+  const panel = $('.map-panel');
+  const px = (name) => parseInt(panel.style.getPropertyValue(name), 10);
+  console.log('   panel:', panel.style.getPropertyValue('--map-w'), 'x', panel.style.getPropertyValue('--map-h'));
+  check(
+    'the panel opens square',
+    /^\d+px$/.test(panel.style.getPropertyValue('--map-w')) && px('--map-w') === px('--map-h'),
+    `${panel.style.getPropertyValue('--map-w')} / ${panel.style.getPropertyValue('--map-h')}`,
+  );
+  check('there are eight resize grips (four corners, four edges)', $$('.map-resize').length === 8, `${$$('.map-resize').length} grips`);
+
+  const pev = (type, x, y) => new window.PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 1 });
+  const dragGrip = async (selector, from, to) => {
+    const grip = $(selector);
+    grip.dispatchEvent(pev('pointerdown', from[0], from[1]));
+    grip.dispatchEvent(pev('pointermove', to[0], to[1]));
+    grip.dispatchEvent(pev('pointerup', to[0], to[1]));
+    await sleep(200);
+  };
+
+  const head = $('.map-head');
+  head.dispatchEvent(pev('pointerdown', 400, 100));
+  head.dispatchEvent(pev('pointermove', 460, 140));
+  head.dispatchEvent(pev('pointerup', 460, 140));
+  await sleep(200);
+  check(
+    'dragging the title bar moves the panel',
+    panel.style.getPropertyValue('--map-x') === '60px' && panel.style.getPropertyValue('--map-y') === '40px',
+    `${panel.style.getPropertyValue('--map-x')} / ${panel.style.getPropertyValue('--map-y')}`,
+  );
+
+  // Only the height for the south edge …
+  const h0 = px('--map-h');
+  const w0 = px('--map-w');
+  await dragGrip('.map-resize.s', [700, 700], [700, 620]);
+  check('the south edge changes the height only', px('--map-h') === h0 - 80 && px('--map-w') === w0, `${w0}x${h0} -> ${px('--map-w')}x${px('--map-h')}`);
+
+  // … only the width for the east edge …
+  const h1 = px('--map-h');
+  const w1 = px('--map-w');
+  await dragGrip('.map-resize.e', [700, 700], [820, 700]);
+  check('the east edge changes the width only', px('--map-w') === w1 + 120 && px('--map-h') === h1, `${w1}x${h1} -> ${px('--map-w')}x${px('--map-h')}`);
+
+  // … and both for a corner.
+  const h2 = px('--map-h');
+  const w2 = px('--map-w');
+  await dragGrip('.map-resize.se', [700, 700], [760, 690]);
+  check(
+    'a corner changes both, independently',
+    px('--map-w') === w2 + 60 && px('--map-h') === h2 - 10,
+    `${w2}x${h2} -> ${px('--map-w')}x${px('--map-h')}`,
+  );
+  check(
+    'the panel never grows past the viewport',
+    px('--map-w') <= window.innerWidth - 32 && px('--map-h') <= window.innerHeight - 32,
+    `${px('--map-w')}x${px('--map-h')} vs ${window.innerWidth - 32}x${window.innerHeight - 32}`,
+  );
+
+  window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await sleep(300);
+  check('Escape closes the panel', !$('.map-overlay'));
+
+  click(coord);
+  await sleep(300);
+  $('.map-overlay')?.dispatchEvent(new window.PointerEvent('pointerdown', { bubbles: true }));
+  await sleep(300);
+  check('clicking outside the panel closes it too', !$('.map-overlay'));
+}
 check('detail shows the ending NPC', detail.kv.some((k) => k.includes('水琴')));
 check(
   'all three prerequisite chips rendered',

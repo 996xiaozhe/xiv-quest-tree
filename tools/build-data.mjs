@@ -71,7 +71,44 @@ for (const r of await loadDataminingCsv(path.join(SRC, 'cn/ExVersion.csv'))) {
   const n = r.get('Name');
   if (n) cnEx.set(r.key, n);
 }
-console.log('  CN names: quests', cnQuestName.size, 'npcs', cnNpc.size, 'places', cnPlace.size);
+
+/**
+ * Where each quest's starting NPC actually stands.
+ *
+ * The interactive map (map.wakingsands.com) is addressed by **Map** id — not Territory —
+ * and its x/y are the same displayed coordinates the detail panel prints. A quest's
+ * PlaceName is too coarse for that: an ARR city quest is filed under 乌尔达哈 as a whole,
+ * which owns three district maps. The Level table resolves the NPC itself, and its Map
+ * column is exactly the map the player sees (it also covers the ~1 100 city quests).
+ */
+const mapByNpc = new Map(); // ENpcResident id -> Map id
+const mapsByPlace = new Map(); // PlaceName id -> [Map id] (fallback, ascending)
+const mapById = new Map(); // Map id -> the row, for anything that needs sizeFactor/offsets
+for (const r of await loadDataminingCsv(path.join(SRC, 'cn/Map.csv'))) {
+  mapById.set(r.key, r);
+  const place = r.num('PlaceName');
+  if (!place) continue;
+  if (!mapsByPlace.has(place)) mapsByPlace.set(place, []);
+  mapsByPlace.get(place).push(r.key);
+}
+for (const ids of mapsByPlace.values()) ids.sort((a, b) => a - b);
+for (const r of await loadDataminingCsv(path.join(SRC, 'cn/Level.csv'))) {
+  const obj = r.num('Object');
+  const map = r.num('Map');
+  if (obj && map && !mapByNpc.has(obj)) mapByNpc.set(obj, map);
+}
+console.log(
+  '  CN names: quests',
+  cnQuestName.size,
+  'npcs',
+  cnNpc.size,
+  'places',
+  cnPlace.size,
+  '| maps',
+  mapById.size,
+  '| NPC spawns',
+  mapByNpc.size,
+);
 
 /* ------------------------------------------------------------------ v2 --- */
 console.log('reading XIVAPI v2 ...');
@@ -190,6 +227,10 @@ for (const q of quests0) {
   const levels = q['ClassJobLevel'] || [];
   const lvl = (n) => (levels[n] && levels[n] !== 65535 ? levels[n] : 0);
 
+  // Which map the coordinate belongs to: the starting NPC's own map when the Level table
+  // knows them, otherwise the first map filed under the quest's area name.
+  const mapId = mapByNpc.get(startNpc) || mapsByPlace.get(placeId)?.[0] || 0;
+
   quests.push({
     id: q.id,
     cn, en, ja,
@@ -203,6 +244,7 @@ for (const q of quests0) {
     jcat: catId,
     jgen: genId,
     place: placeId,
+    mp: mapId,
     start: startNpc,
     end: endNpc,
     prev,

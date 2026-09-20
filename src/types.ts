@@ -41,6 +41,11 @@ export interface Quest {
   jgen: number;
   /** PlaceName — 所属地区 */
   place: number;
+  /**
+   * Map-table row id of the map the starting NPC stands on (what map.wakingsands.com
+   * wants in its link), 0 when unknown. Not a Territory id.
+   */
+  mp: number;
   /** ENpcResident — 开始NPC */
   start: number;
   /** ENpcResident — 结束NPC */

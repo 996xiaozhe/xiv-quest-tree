@@ -24,6 +24,10 @@ const FILES = [
   'ClassJob.csv',
   'ExVersion.csv',
   'TerritoryType.csv',
+  // For the interactive-map link: the Map table (id + place), and the Level table,
+  // which is what tells us which map a quest's starting NPC actually stands on.
+  'Map.csv',
+  'Level.csv',
 ];
 
 await mkdir(OUT, { recursive: true });
