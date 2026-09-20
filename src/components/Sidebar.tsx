@@ -36,11 +36,18 @@ interface ListProps {
   onToggle: (id: number) => void;
   onClear: () => void;
   t: T;
+  /**
+   * Whether the category field is offered. It is decided from the group's FULL source
+   * list, not from what a higher-level filter left behind: a field that appears or
+   * disappears the moment you tick something above it resizes the whole panel and moves
+   * every row out from under the cursor.
+   */
+  showSearch: boolean;
   colorFor?: (e: TaxoEntry) => string | undefined;
   emptyHint?: string;
 }
 
-function FilterList({ title, items, selected, onToggle, onClear, t, colorFor, emptyHint }: ListProps) {
+function FilterList({ title, items, selected, onToggle, onClear, t, showSearch, colorFor, emptyHint }: ListProps) {
   const [query, setQuery] = useState('');
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,7 +64,7 @@ function FilterList({ title, items, selected, onToggle, onClear, t, colorFor, em
           </button>
         ) : null}
       </header>
-      {items.length > 12 ? (
+      {showSearch ? (
         <input
           className="fgroup-search"
           value={query}
@@ -157,6 +164,7 @@ export const Sidebar = memo(function Sidebar({ taxo, t, filters, setFilters, tot
           onToggle={(id) => patch({ ex: toggle(filters.ex, id) })}
           onClear={() => patch({ ex: new Set() })}
           t={t}
+          showSearch={taxo.ex.length > 12}
         />
         <FilterList
           title={t('filter.section')}
@@ -165,6 +173,7 @@ export const Sidebar = memo(function Sidebar({ taxo, t, filters, setFilters, tot
           onToggle={(id) => patch({ js: toggle(filters.js, id), jcat: new Set(), jgen: new Set() })}
           onClear={() => patch({ js: new Set(), jcat: new Set(), jgen: new Set() })}
           t={t}
+          showSearch={taxo.js.length > 12}
           colorFor={sectionColor}
         />
         <FilterList
@@ -174,6 +183,7 @@ export const Sidebar = memo(function Sidebar({ taxo, t, filters, setFilters, tot
           onToggle={(id) => patch({ jcat: toggle(filters.jcat, id), jgen: new Set() })}
           onClear={() => patch({ jcat: new Set(), jgen: new Set() })}
           t={t}
+          showSearch
         />
         <FilterList
           title={t('filter.genre')}
@@ -182,6 +192,7 @@ export const Sidebar = memo(function Sidebar({ taxo, t, filters, setFilters, tot
           onToggle={(id) => patch({ jgen: toggle(filters.jgen, id) })}
           onClear={() => patch({ jgen: new Set() })}
           t={t}
+          showSearch
         />
       </div>
 

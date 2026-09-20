@@ -558,11 +558,15 @@ input {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  /* Fixed row height: the "clear this group" link only exists while something is
+     selected, and if it made the row taller the field below would be squeezed. */
+  height: 19px;
   margin-bottom: 7px;
 }
 .fgroup-head h3 {
   margin: 0;
   font-size: 0.8125rem;
+  line-height: 1;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--text-dim);
@@ -574,6 +578,7 @@ input {
   color: var(--gold-dim);
   cursor: pointer;
   font-size: 0.75rem;
+  line-height: 1;
   letter-spacing: 0.06em;
   padding: 0;
 }
@@ -581,10 +586,15 @@ input {
   color: var(--gold-bright);
 }
 /* Sits above a list whose rows are 0.8438rem, so it borrows that size: at 0.9375rem the
-   placeholder filled the box edge to edge instead of looking like a field. */
+   placeholder filled the box edge to edge instead of looking like a field.
+   `flex: 0 0 auto` is what keeps the box the same height no matter what happens around
+   it — it shares a height-starved column with a scrollable list, and a shrinkable field
+   would be the first thing squeezed whenever the rows above or below change. */
 .fgroup-search {
+  flex: 0 0 auto;
   width: 100%;
   height: 42px;
+  min-height: 42px;
   margin-bottom: 6px;
   padding: 0 11px;
   font-size: 0.8438rem;

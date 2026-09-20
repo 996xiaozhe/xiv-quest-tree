@@ -199,6 +199,10 @@ if (target) {
   console.log('   stats after filter:', stats);
   check('stats shrink to the 40 filtered quests', /^40 /.test(stats || ''), stats);
   check('legend adapts to the filtered view', $$('.legend li').length > 0);
+  // The category fields are offered because the FULL group lists are long, not because
+  // the narrowed list happens to be: otherwise ticking a parent filter makes a field
+  // vanish and shifts every row under the cursor.
+  check('the category fields survive a narrowing selection', $$('.fgroup-search').length === 2, `${$$('.fgroup-search').length} fields`);
   check('marker icons appear once the view is small enough', $$('.legend img.legend-icon').length === 3, `${$$('.legend img.legend-icon').length} icons`);
   check(
     'the legend offers all three quest-marker icons',
