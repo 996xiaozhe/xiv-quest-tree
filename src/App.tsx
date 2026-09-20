@@ -3,11 +3,14 @@ import type { Filters, Lang, QuestData } from './types.ts';
 import { LANGS, emptyFilters } from './types.ts';
 import {
   applyFilters,
+  availableQuests,
   buildTaxonomy,
   dependencyClosure,
+  impliedDone,
   loadQuestData,
   nameOf,
   prerequisiteSet,
+  toggleMarked,
   type DependencyView,
 } from './data.ts';
 import { LANG_SHORT, chooseLang, translate } from './i18n.ts';
@@ -17,6 +20,7 @@ import { QuestDetail } from './components/QuestDetail.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
 import { BootScreen } from './components/BootScreen.tsx';
 import { MarkerIcon } from './components/MarkerIcon.tsx';
+import { TodoPanel } from './components/TodoPanel.tsx';
 import {
   buildNameIndex,
   dependencyPath,
@@ -31,6 +35,8 @@ import { ICON_JOB, ICON_MAIN, ICON_SIDE, markerIconForQuest } from './graph/icon
 
 const LANG_KEY = 'xiv-quest-tree:lang';
 const THEME_KEY = 'xiv-quest-tree:theme';
+/** Explicitly ticked quests; everything they imply is derived from these. */
+const DONE_KEY = 'xiv-quest-tree:done';
 /** Where the top-bar GitHub mark points. */
 const REPO_URL = 'https://github.com/996xiaozhe/xiv-quest-tree';
 
@@ -74,6 +80,26 @@ function initialTheme(): Theme {
   return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: light)').matches ? 'day' : 'night';
 }
 
+/** Quest ids the player ticked off. Only the explicit ticks are stored — the implied
+ *  prerequisites are derived, see `impliedDone`. */
+function loadDone(): Set<number> {
+  try {
+    const raw = localStorage.getItem(DONE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((v): v is number => typeof v === 'number') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDone(ids: Set<number>): void {
+  try {
+    localStorage.setItem(DONE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // private mode / quota: progress still works for this session
+  }
+}
+
 export default function App() {
   const [data, setData] = useState<QuestData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +114,7 @@ export default function App() {
   const [dependency, setDependency] = useState<DependencyView | null>(null);
   const [routeMiss, setRouteMiss] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [doneIds, setDoneIds] = useState<Set<number>>(loadDone);
   const graphRef = useRef<GraphHandle | null>(null);
   const nonceRef = useRef(0);
 
@@ -214,6 +241,9 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, [applyRoute]);
 
+  /** Everything the ticked quests imply: finishing one finishes its whole ancestry. */
+  const done = useMemo(() => impliedDone(doneIds, index), [doneIds, index]);
+
   const visible = useMemo(() => {
     if (!data) return [];
     // The right-click dependency view deliberately overrides the sidebar filters, so
@@ -222,6 +252,17 @@ export default function App() {
     return applyFilters(data.quests, filters);
   }, [data, filters, dependency, index]);
   const visibleSet = useMemo(() => new Set(visible.map((q) => q.id)), [visible]);
+
+  /**
+   * What is left to do *inside the dependency view on screen*: quests of that view whose
+   * requirements are all finished. Scoped to the view on purpose — asked of the whole
+   * graph the same question answers with hundreds of side branches nobody is asking
+   * about. Nothing is shown at all until the player marks something.
+   */
+  const todo = useMemo(
+    () => (dependency && doneIds.size ? availableQuests(visible, done) : []),
+    [dependency, doneIds, visible, done],
+  );
 
   const edgeCount = useMemo(() => {
     let n = 0;
@@ -262,13 +303,44 @@ export default function App() {
   const jumpTo = useCallback(
     (id: number, scale = 0.95) => {
       setSelected(id);
+      // Inside a /pre or /post view the chips in the detail panel are almost always part
+      // of that ancestry, so clicking one moves the camera to it and stays in the view
+      // the user is reading. Only a quest outside the view (a follow-up while looking at
+      // prerequisites, say) leaves for the global graph.
+      if (dependency && visibleSet.has(id)) {
+        nonceRef.current += 1;
+        // no scale: keep the zoom the view opened with, just centre the quest
+        setFocusRequest({ id, nonce: nonceRef.current });
+        return;
+      }
       setDependency(null);
       if (!visibleSet.has(id)) setFilters(emptyFilters());
       nonceRef.current += 1;
       setFocusRequest({ id, nonce: nonceRef.current, scale });
     },
-    [visibleSet],
+    [visibleSet, dependency],
   );
+
+  /**
+   * Ticks a quest off (or un-ticks it, which also un-ticks everything that depends on
+   * it). Only the explicit ticks are stored — everything they imply is derived.
+   */
+  const toggleDone = useCallback(
+    (id: number) => {
+      setMenu(null);
+      setDoneIds((prev) => {
+        const next = toggleMarked(prev, id, index);
+        saveDone(next);
+        return next;
+      });
+    },
+    [index],
+  );
+
+  const clearDone = useCallback(() => {
+    setDoneIds(new Set());
+    saveDone(new Set());
+  }, []);
 
   /**
    * Enters the dependency view. The address bar is deliberately left alone: the view
@@ -452,27 +524,47 @@ export default function App() {
             matches={matches}
             langIndex={lang === 'cn' ? 0 : lang === 'en' ? 1 : 2}
             showLocks={filters.showLocks}
+            done={done}
             theme={theme}
             t={t}
             focusRequest={focusRequest}
           />
 
-          {dependency && depRoot ? (
-            <div className="dep-banner">
-              <span className="dep-tag">{t('dep.title')}</span>
-              <strong>
-                {t(dependency.dir === 'prev' ? 'dep.prev' : 'dep.next', { name: nameOf(depRoot, lang) })}
-              </strong>
-              <span className="dep-count">{t('dep.count', { n: visible.length })}</span>
-              <span className="dep-note">{t('dep.hint')}</span>
-              <button type="button" className="dep-copy" onClick={copyShareUrl} title={shareUrl ?? undefined}>
-                {copied ? t('dep.copied') : t('dep.copy')}
-              </button>
-              <button type="button" onClick={exitDependency}>
-                {t('dep.exit')}
-              </button>
-            </div>
-          ) : null}
+          {/* Banner and the "ready to pick up" list share one stack, so they line up as
+              one column and the list sits just under the banner. */}
+          <div className="dep-stack">
+            {dependency && depRoot ? (
+              <div className="dep-banner">
+                <span className="dep-tag">{t('dep.title')}</span>
+                <strong>
+                  {t(dependency.dir === 'prev' ? 'dep.prev' : 'dep.next', { name: nameOf(depRoot, lang) })}
+                </strong>
+                <span className="dep-count">{t('dep.count', { n: visible.length })}</span>
+                <span className="dep-note">{t('dep.hint')}</span>
+                <button type="button" className="dep-copy" onClick={copyShareUrl} title={shareUrl ?? undefined}>
+                  {copied ? t('dep.copied') : t('dep.copy')}
+                </button>
+                <button type="button" onClick={exitDependency}>
+                  {t('dep.exit')}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Only once the player keeps track of progress, and only inside a view. An
+                empty list takes the whole panel away rather than sitting there counting
+                zero. */}
+            {dependency && depRoot && todo.length ? (
+              <TodoPanel
+                key={`${dependency.root}:${dependency.dir}`}
+                todo={todo}
+                done={done}
+                lang={lang}
+                t={t}
+                onPick={handleJump}
+                onMark={toggleDone}
+              />
+            ) : null}
+          </div>
 
           {routeMiss ? (
             <div className="dep-banner dep-banner-miss">
@@ -505,6 +597,12 @@ export default function App() {
               />
               <span>{t('view.showLocks')}</span>
             </label>
+            {/* Progress tools only mean something once something has been ticked off. */}
+            {doneIds.size ? (
+              <button type="button" className="wide" title={t('done.clearHint')} onClick={clearDone}>
+                {t('done.clear', { n: doneIds.size })}
+              </button>
+            ) : null}
           </div>
 
           <div className="stage-stats">
@@ -517,6 +615,11 @@ export default function App() {
             <span>
               <b>{rankCount}</b> {t('stats.ranks')}
             </span>
+            {doneIds.size ? (
+              <span className="stats-done">
+                <b>{doneIds.size}</b> {t('stats.done')}
+              </span>
+            ) : null}
             <span className="hint">{t('view.compass')}</span>
           </div>
 
@@ -595,6 +698,13 @@ export default function App() {
               >
                 {t('menu.focus')}
               </button>
+              <button
+                type="button"
+                className={done.has(menu.id) ? 'ctx-done on' : 'ctx-done'}
+                onClick={() => toggleDone(menu.id)}
+              >
+                {done.has(menu.id) ? t('menu.unmarkDone') : t('menu.markDone')}
+              </button>
             </div>
           ) : null}
         </main>
@@ -607,6 +717,8 @@ export default function App() {
           t={t}
           onJump={handleJump}
           onDependency={openDependency}
+          done={selected != null && done.has(selected)}
+          onToggleDone={toggleDone}
         />
       </div>
     </div>

@@ -102,6 +102,66 @@ export function loadQuestData(onProgress?: (ratio: number) => void): Promise<Que
 export const nameOf = (q: Quest, lang: Lang): string =>
   (lang === 'cn' ? q.cn : lang === 'en' ? q.en : q.ja) || q.en || q.cn || q.ja || `#${q.id}`;
 
+/**
+ * Everything a set of finished quests implies. Finishing a quest finishes its whole
+ * prerequisite chain, so only what the player actually ticked has to be stored; the rest
+ * is derived here.
+ */
+export function impliedDone(ids: Iterable<number>, index: Map<number, Quest>): Set<number> {
+  const out = new Set<number>();
+  const stack = [...ids];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (out.has(id)) continue;
+    out.add(id);
+    const q = index.get(id);
+    if (!q) continue;
+    for (const p of q.prev) if (!out.has(p)) stack.push(p);
+  }
+  return out;
+}
+
+/**
+ * Ticks a quest off, or un-ticks it — decided by whether the quest currently counts as
+ * finished, which includes the prerequisites a tick implies.
+ *
+ * Ticking stores just that quest; its prerequisites come along implicitly (see
+ * `impliedDone`). Un-ticking a quest that is only finished *because* something later
+ * depends on it is the interesting case: it has to drop the ticks that imply it, or the
+ * quest would come straight back. Either way, everything downstream goes with it — a
+ * follow-up cannot stay finished once what it requires is not.
+ */
+export function toggleMarked(marked: Set<number>, id: number, index: Map<number, Quest>): Set<number> {
+  const next = new Set(marked);
+  if (!impliedDone(next, index).has(id)) {
+    next.add(id);
+    return next;
+  }
+  const dependents = new Set<number>();
+  for (const q of dependencyClosure(index, id, 'next', false)) dependents.add(q.id);
+  for (const ticked of [...next]) if (dependents.has(ticked)) next.delete(ticked);
+  return next;
+}
+
+/**
+ * The quests a player can start right now: every prerequisite (and extra unlock
+ * condition) is in `done` — which must already be the implied set — and the quest itself
+ * is not.
+ *
+ * Quests with no requirements at all are always left out: they are open from the start,
+ * so they are not "next" and would flood the answer.
+ */
+export function availableQuests(quests: Quest[], done: Set<number>): Quest[] {
+  if (!done.size) return [];
+  return quests.filter((q) => {
+    if (done.has(q.id)) return false;
+    if (!q.prev.length && !q.lock.length) return false;
+    for (const p of q.prev) if (!done.has(p)) return false;
+    for (const l of q.lock) if (!done.has(l)) return false;
+    return true;
+  });
+}
+
 export const dictName = (trio: Trio | undefined, lang: Lang): string =>
   trio ? trio[LANG_INDEX[lang]] || trio[1] || trio[0] : '';
 

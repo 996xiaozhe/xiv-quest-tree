@@ -18,6 +18,9 @@ interface Props {
   t: T;
   onJump: (id: number) => void;
   onDependency: (id: number, dir: 'prev' | 'next') => void;
+  /** counts as finished — ticked, or a prerequisite of something ticked */
+  done: boolean;
+  onToggleDone: (id: number) => void;
 }
 
 const LODESTONE = 'https://eu.finalfantasyxiv.com/lodestone/playguide/db/quest/';
@@ -66,7 +69,17 @@ function Chips({
   );
 }
 
-export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang, t, onJump, onDependency }: Props) {
+export const QuestDetail = memo(function QuestDetail({
+  quest,
+  data,
+  index,
+  lang,
+  t,
+  onJump,
+  onDependency,
+  done,
+  onToggleDone,
+}: Props) {
   // Which quest's map is open. Storing the id (instead of a boolean) means selecting
   // another quest closes the panel on its own, with no effect to keep in sync.
   const [mapQuest, setMapQuest] = useState<number | null>(null);
@@ -122,6 +135,7 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
         </div>
         <div className="detail-badges">
           {isMainScenario(quest) ? <span className="badge gold">{t('legend.main')}</span> : null}
+          {done ? <span className="badge done">{t('panel.done')}</span> : null}
           {quest.lv ? <span className="badge">{t('panel.levelShort', { n: quest.lv })}</span> : null}
           {quest.patch ? <span className="badge">v{quest.patch}</span> : null}
           {quest.rep ? <span className="badge">{t('panel.repeatable')}</span> : null}
@@ -255,6 +269,13 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
         <div className="detail-actions">
           <button type="button" className="primary" onClick={() => onDependency(quest.id, 'prev')}>
             {t('menu.prereq')}
+          </button>
+          <button
+            type="button"
+            className={done ? 'done-toggle on' : 'done-toggle'}
+            onClick={() => onToggleDone(quest.id)}
+          >
+            {done ? t('panel.doneToggleOff') : t('panel.doneToggleOn')}
           </button>
         </div>
       </div>

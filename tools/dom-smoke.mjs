@@ -481,8 +481,10 @@ check(
   JSON.stringify(detail.links),
 );
 check(
-  'only the prerequisite-view button remains',
-  detail.actionButtons.length === 1 && detail.actionButtons[0] === '查看前置依赖',
+  'the detail panel offers the prerequisite view and the finished toggle',
+  detail.actionButtons.length === 2 &&
+    detail.actionButtons[0] === '查看前置依赖' &&
+    detail.actionButtons[1] === '标记为已完成',
   JSON.stringify(detail.actionButtons),
 );
 
@@ -543,10 +545,118 @@ check(
   `${$$('.legend img.legend-icon').length} icons`,
 );
 
+// Clicking a chip that is part of the view must move the camera, not throw the view away.
+{
+  const chip = $$('.detail .chip').find((c) => c.textContent.trim().length > 0);
+  const chipName = chip?.querySelector('.chip-name')?.textContent.trim() ?? '';
+  click(chip);
+  await sleep(1200);
+  console.log('   in-view chip:', chipName, '->', text('.detail h2'));
+  check('a chip inside the dependency view keeps the view', !!$('.dep-banner') && text('.dep-banner') === depBanner, String(text('.dep-banner')));
+  check('…and selects the quest that was clicked', text('.detail h2') === chipName, `${chipName} vs ${text('.detail h2')}`);
+  check('…without changing the quests in view', text('.stage-stats') === depStats, `${text('.stage-stats')} vs ${depStats}`);
+}
+
 const exitBtn = $('.dep-banner button:not(.dep-copy)');
 exitBtn?.click();
 await sleep(900);
 check('exiting the dependency view restores the full graph', /^5377 /.test(text('.stage-stats') || ''), text('.stage-stats'));
+
+/* -------------------------------------------------------- finished quests */
+console.log('\n--- marking quests finished ---');
+{
+  const KEY = 'xiv-quest-tree:done';
+  const stored = () => JSON.parse(window.localStorage.getItem(KEY) || '[]');
+
+  // Select a known quest through the search box so the chips below are predictable.
+  const markedName = '苍鹰归巢作战';
+  const searchBox = $('.search input');
+  setValue(searchBox, markedName);
+  await sleep(700);
+  click($$('.search-pop li button').find((b) => b.textContent.includes(markedName)));
+  await sleep(1200);
+  check('the quest to mark is selected', text('.detail h2') === markedName, String(text('.detail h2')));
+
+  const toggle = $$('.detail-actions button').find((b) => b.textContent.includes('标记为已完成'));
+  check('the detail panel offers a finished toggle', !!toggle, String(toggle?.textContent));
+  check('nothing is marked yet', stored().length === 0, JSON.stringify(stored()));
+
+  click(toggle);
+  await sleep(900);
+  console.log('   marked:', markedName, '| stored:', JSON.stringify(stored()));
+  check('clicking it stores the quest', stored().length === 1 && stored()[0] === 69477, JSON.stringify(stored()));
+  check('the panel shows the finished badge', !!$$('.detail .badge').find((b) => b.textContent.trim() === '已完成'));
+  check('the button flips to un-mark', !!$$('.detail-actions button').find((b) => b.textContent.includes('取消已完成标记')));
+
+  const stats = text('.stage-stats');
+  console.log('   stats:', stats);
+  check('the stats report how much is finished', /已完成/.test(stats || ''), stats);
+  check('nothing is suggested outside a dependency view', !$('.dep-next'));
+
+  // Opening the dependency view of a follow-up must list what is still to be done on the
+  // way to it — and nothing at all before anything has been marked (asserted above).
+  const followUpChip = $$('.detail .chip').find((c) => c.textContent.includes('记录“战果记录”'));
+  check('the ticked quest offers its follow-up', !!followUpChip, String(followUpChip?.textContent));
+  click(followUpChip);
+  await sleep(1200);
+  check('clicking it selects the follow-up', text('.detail h2') === '记录“战果记录”', String(text('.detail h2')));
+
+  click($$('.detail-actions button').find((b) => b.textContent.includes('查看前置依赖')));
+  await sleep(1400);
+  const todo = $('.dep-next');
+  console.log('   todo list:', text('.dep-next'));
+  check('the dependency view lists what is ready to pick up', !!todo, String(text('.dep-next')));
+  check('the list shares the banner column', $('.dep-stack > .dep-banner') !== null && $('.dep-stack > .dep-next') !== null);
+  check(
+    'the list holds exactly the next quest on that chain, one row each',
+    todo?.querySelectorAll('li.dep-row').length === 1 && (todo.textContent || '').includes('记录“战果记录”'),
+    String(text('.dep-next')),
+  );
+  const rowDone = $('.dep-next li.dep-row button.dep-row-done');
+  check('every row carries its own finish button', !!rowDone, String(rowDone?.textContent));
+  check('the row itself is clickable to select the quest', !!$('.dep-next li.dep-row button.dep-row-go'));
+
+  // Finishing from the list ticks the quest off. Nothing on this chain is left, so the
+  // panel goes away entirely instead of sitting there counting zero.
+  click(rowDone);
+  await sleep(900);
+  check('finishing from the list ticks the quest off', stored().includes(69478), JSON.stringify(stored()));
+  check('an emptied list takes the panel away', !$('.dep-next'), String(text('.dep-next')));
+
+  // The chain case the user described: only the last quest was ticked, and un-ticking an
+  // *earlier, implied* quest must open that quest and everything after it again.
+  const eagle = DATA.quests.find((q) => q.id === 69477);
+  const implied = DATA.quests.find((q) => q.id === eagle.prev[0]);
+  console.log('   walking back to the implied prerequisite:', implied.cn);
+  setValue(searchBox, implied.cn);
+  await sleep(700);
+  click($$('.search-pop li button').find((b) => b.textContent.includes(implied.cn)));
+  await sleep(1200);
+  check('the implied prerequisite is selected', text('.detail h2') === implied.cn, String(text('.detail h2')));
+  check('it shows as finished', !!$$('.detail .badge').find((b) => b.textContent.trim() === '已完成'));
+  const unmarkFromImplied = $$('.detail-actions button').find((b) => b.textContent.includes('取消已完成标记'));
+  check('an implied-finished quest can be un-ticked from its own panel', !!unmarkFromImplied, String(unmarkFromImplied?.textContent));
+
+  click(unmarkFromImplied);
+  await sleep(900);
+  console.log('   after un-ticking it, stored:', JSON.stringify(stored()));
+  check('un-ticking it opens the whole chain again', stored().length === 0, JSON.stringify(stored()));
+  check('and the finished badge is gone', !$$('.detail .badge').find((b) => b.textContent.trim() === '已完成'));
+
+  // Mark again so the clear button has something to do.
+  click($$('.detail-actions button').find((b) => b.textContent.includes('标记为已完成')));
+  await sleep(700);
+  const clear = $$('.stage-tools button').find((b) => b.textContent.includes('清除标记'));
+  check('a clear button appears in the tools', !!clear, String(clear?.textContent));
+  click(clear);
+  await sleep(700);
+  check('clearing removes every mark', stored().length === 0, JSON.stringify(stored()));
+  check('the progress switches disappear again', !$$('.stage-tools button').find((b) => b.textContent.includes('清除标记')));
+  check('and so does the suggested list', !$('.dep-next'));
+  const backBtn = $('.dep-banner button:not(.dep-copy)');
+  backBtn?.click();
+  await sleep(900);
+}
 
 /* ------------------------------------------------------------ deep links */
 console.log('\n--- shareable /pre and /post links ---');

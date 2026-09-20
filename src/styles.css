@@ -1137,6 +1137,12 @@ input {
   color: var(--gold-bright);
   background: color-mix(in srgb, var(--gold) 12%, transparent);
 }
+/* "Finished" is deliberately quiet: it is state, not an achievement. */
+.badge.done {
+  border-color: var(--line);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+}
 
 .detail-scroll {
   flex: 1 1 auto;
@@ -1244,7 +1250,155 @@ input {
   color: var(--muted);
 }
 
-/* ------------------------------------------------------------------ map -- */
+/* Inside a dependency view: the quests of that chain that are ready to be picked up, one
+   per row. Sits in the same stack as the banner, so the two are the same width. */
+.dep-next {
+  padding: 9px 12px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+.dep-next-tag {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.dep-next-tag b {
+  color: var(--gold-bright);
+}
+.dep-next-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dep-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-height: 44px;
+  padding: 3px 2px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+.dep-row-go {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px;
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  color: var(--text-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.dep-row-go:hover {
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  color: var(--gold-bright);
+}
+.dep-row-name {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.dep-row-done {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--field);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.dep-row-done:hover {
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  color: var(--gold-bright);
+}
+/* Just finished, and nothing opened up: a line is drawn through it and the row stays. */
+.dep-row.struck {
+  color: var(--muted);
+}
+.dep-row.struck .dep-row-name::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 55%;
+  height: 1px;
+  background: currentColor;
+  width: 0;
+  animation: dep-strike 0.38s ease-out forwards;
+}
+@keyframes dep-strike {
+  to {
+    width: 100%;
+  }
+}
+/* …and when something *did* open up, the struck row is pushed out to the left. */
+.dep-row.leaving {
+  animation: dep-row-out 0.32s ease-in forwards;
+}
+@keyframes dep-row-out {
+  to {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    transform: translateX(-110%);
+  }
+}
+/* The new quest arrives from the left, at the position it holds in the list. */
+.dep-row.fresh {
+  animation: dep-row-in 0.34s ease-out;
+}
+@keyframes dep-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-80px);
+  }
+}
+.dep-next-more {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dep-row,
+  .dep-row.struck .dep-row-name::after,
+  .dep-row.fresh {
+    animation: none;
+  }
+  .dep-row.struck .dep-row-name::after {
+    width: 100%;
+  }
+}
+@media (max-width: 780px) {
+  .dep-stack {
+    width: calc(100% - 16px);
+  }
+  .dep-next {
+    padding: 7px 9px 8px;
+  }
+}
 
 /* The map site answers without X-Frame-Options, so it can live in an iframe; the panel
    floats over everything, is dragged by its title bar and resized from any edge or
@@ -1589,6 +1743,37 @@ input {
   border-color: var(--line-strong);
   color: var(--gold-bright);
 }
+/* Marking a quest finished sits beside the primary action, one size down. */
+.detail-actions .done-toggle {
+  flex: 1 1 100%;
+  height: 40px;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.15s;
+}
+.detail-actions .done-toggle:hover {
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+}
+.detail-actions .done-toggle.on {
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  border-color: var(--gold-dim);
+  color: var(--gold-bright);
+}
+/* Context-menu variant: same rows as the view actions, tinted when already ticked. */
+.ctx-menu .ctx-done.on {
+  color: var(--gold-bright);
+}
+.stats-done {
+  color: var(--gold-dim);
+}
+.stats-done b {
+  color: var(--gold-bright);
+}
 
 .muted {
   color: var(--muted);
@@ -1717,17 +1902,27 @@ input {
 
 /* --------------------------------------------------------- dependency view -- */
 
-/* Banner reuses the stage-stats surface; its button reuses the toolbar button. */
-.dep-banner {
+/* --------------------------------------------------------- dependency view -- */
+
+/* Banner and the "ready to pick up" list share one column, which is also what makes them
+   the same width. */
+.dep-stack {
   position: absolute;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 12;
+  width: min(780px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Banner reuses the stage-stats surface; its button reuses the toolbar button. */
+.dep-banner {
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: calc(100% - 24px);
   padding: 8px 14px;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -1801,8 +1996,15 @@ input {
   color: var(--gold-bright);
   border-color: var(--line-strong);
 }
-/* A shared link that no longer resolves: same surface, warning tone. */
+/* A shared link that no longer resolves: same surface, warning tone. It is not part of the
+   dependency stack (there is no dependency view to stack under), so it positions itself. */
 .dep-banner-miss {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  max-width: calc(100% - 24px);
   border-color: var(--warn-line);
 }
 .dep-banner-miss .dep-tag {

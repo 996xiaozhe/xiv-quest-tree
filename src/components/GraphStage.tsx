@@ -27,6 +27,8 @@ interface Props {
   matches: Set<number>;
   langIndex: 0 | 1 | 2;
   showLocks: boolean;
+  /** quests that count as finished — drawn fainter */
+  done: Set<number>;
   /** day or night canvas palette */
   theme: Theme;
   /** UI translator, used only for the hover tooltip */
@@ -50,7 +52,7 @@ interface CamState {
 }
 
 export const GraphStage = forwardRef<GraphHandle, Props>(function GraphStage(props, ref) {
-  const { nodes, index, selected, onSelect, highlight, matches, langIndex, showLocks, t, theme, focusRequest } = props;
+  const { nodes, index, selected, onSelect, highlight, matches, langIndex, showLocks, done, t, theme, focusRequest } = props;
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,7 +86,7 @@ export const GraphStage = forwardRef<GraphHandle, Props>(function GraphStage(pro
 
   // Everything that does not depend on the viewport is precomputed once per filter
   // change: typed arrays of positions plus per-colour index buckets and the edge list.
-  const model = useMemo(() => buildNodeModel(nodes, layout.pos, theme), [nodes, layout, theme]);
+  const model = useMemo(() => buildNodeModel(nodes, layout.pos, theme, done), [nodes, layout, theme, done]);
   const edgeModel = useMemo(() => buildEdgeModel(nodes, model.byId, showLocks), [nodes, model, showLocks]);
 
   // No marker bitmaps are ever drawn on a node — every quest is a plain diamond — so

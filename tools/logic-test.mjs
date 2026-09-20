@@ -7,7 +7,7 @@ import { PALETTES, rgbToHex } from '../src/graph/theme.ts';
 import { buildNameIndex, dependencyPath, homePath, parseLocation, resolveRoute } from '../src/route.ts';
 import { mapUrl } from '../src/map.ts';
 import { chooseLang, firstSupportedLang } from '../src/i18n.ts';
-import { applyFilters, buildTaxonomy, datasetSources, dependencyClosure, fetchFirstAvailable, prerequisiteSet, relatedSet, searchQuests } from '../src/data.ts';
+import { applyFilters, availableQuests, buildTaxonomy, datasetSources, dependencyClosure, fetchFirstAvailable, impliedDone, prerequisiteSet, relatedSet, searchQuests, toggleMarked } from '../src/data.ts';
 import { cdnUrlFor } from '../src/cdn.ts';
 import { markerIconLocalUrl, markerIconUrl } from '../src/graph/icons.ts';
 import { layoutGraph, DEFAULT_X_STEP, DEFAULT_Y_STEP } from '../src/graph/layout.ts';
@@ -473,6 +473,71 @@ console.log('\n=== CDN mirror ===');
     }
     check('if every source fails the loader reports it', threw && tried.length === 2, tried.join(' → '));
   }
+}
+
+console.log('\n=== finished quests & what is available now ===');
+{
+  const eagle = index.get(69477);
+  const done = impliedDone([eagle.id], index);
+  console.log(`   marking 「${eagle.cn}」 finished implies ${done.size} quests`);
+
+  check('the ticked quest is in the finished set', done.has(eagle.id));
+  check('its own prerequisites are implied', eagle.prev.every((p) => done.has(p)), eagle.prev.join(','));
+  check('and so is their whole ancestry', [...done].every((id) => (index.get(id)?.prev ?? []).every((p) => done.has(p) || !index.has(p))));
+  check('nothing unrelated sneaks in', done.size < 900, `${done.size}`);
+  check('an empty mark set implies nothing', impliedDone([], index).size === 0);
+  check('unknown ids are tolerated', [...impliedDone([-1], index)].length === 1);
+
+  // The frontier: what a player can start right now.
+  const open = availableQuests(data.quests, done);
+  console.log(`   available now: ${open.length} quests (whole graph)`);
+  check('with nothing finished there is no frontier', availableQuests(data.quests, new Set()).length === 0);
+  check('nothing already finished is offered again', open.every((q) => !done.has(q.id)));
+  check(
+    'every offered quest has all of its requirements finished',
+    open.every((q) => [...q.prev, ...q.lock].every((r) => done.has(r))),
+  );
+  check('quests that nothing unlocks are left out', open.every((q) => q.prev.length + q.lock.length > 0));
+  check('over the whole graph the frontier is huge, which is why the site scopes it', open.length > 100, `${open.length}`);
+
+  // Scoped to one chain — exactly what the dependency view asks for.
+  const followUp = index.get(69478); // 记录“战果记录”, its only prerequisite is the ticked quest
+  const chain = dependencyClosure(index, followUp.id, 'prev', false);
+  const nextOnChain = availableQuests(chain, done);
+  console.log(`   ready on the way to 「${followUp.cn}」: ${nextOnChain.map((q) => q.cn).join(',')}`);
+  check('scoped to a chain, the answer is just the next step', nextOnChain.length === 1 && nextOnChain[0].id === followUp.id, nextOnChain.map((q) => q.cn).join(','));
+  check('and none of it is already finished', nextOnChain.every((q) => !done.has(q.id)));
+
+  // Ticking and un-ticking, including the cascade.
+  const ticked = toggleMarked(new Set(), eagle.id, index);
+  check('ticking stores only the quest itself', ticked.size === 1 && ticked.has(eagle.id), [...ticked].join(','));
+  check('its prerequisites come along implicitly', impliedDone(ticked, index).size === done.size, `${impliedDone(ticked, index).size}`);
+  const both = toggleMarked(new Set([eagle.id]), followUp.id, index);
+  check('a second tick is stored beside the first', both.size === 2, [...both].join(','));
+
+  // The chain case: a → b → c → d, where only d was ticked. Un-ticking the *implied* c has
+  // to make c and d open again, which means dropping the tick on d.
+  const impliedPrereq = index.get(69372); // 博兹雅堡垒蒸发事件, an implied prerequisite of the ticked quest
+  check('the prerequisite counts as finished without being ticked', impliedDone(new Set([eagle.id]), index).has(impliedPrereq.id) && !new Set([eagle.id]).has(impliedPrereq.id));
+  const afterImpliedUnmark = toggleMarked(new Set([eagle.id]), impliedPrereq.id, index);
+  check(
+    'un-ticking an implied prerequisite opens up the whole chain again',
+    afterImpliedUnmark.size === 0,
+    [...afterImpliedUnmark].join(','),
+  );
+  check('…so nothing is finished any more', impliedDone(afterImpliedUnmark, index).size === 0);
+
+  // The cascade must not touch ticks on unrelated chains.
+  const mixed = new Set([eagle.id, 66314]);
+  const afterMixed = toggleMarked(mixed, impliedPrereq.id, index);
+  check('un-ticking leaves unrelated ticks alone', [...afterMixed].join(',') === '66314', [...afterMixed].join(','));
+  const cascaded = toggleMarked(both, eagle.id, index);
+  check(
+    'un-ticking a ticked quest un-ticks everything that depends on it',
+    !cascaded.has(eagle.id) && !cascaded.has(followUp.id) && cascaded.size === 0,
+    [...cascaded].join(','),
+  );
+  check('an unrelated quest can be ticked off as well', toggleMarked(new Set(), 66314, index).size === 1);
 }
 
 console.log('\n=== layout ===');

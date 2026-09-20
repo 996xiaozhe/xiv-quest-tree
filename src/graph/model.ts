@@ -26,6 +26,8 @@ export interface NodeModel {
   y: Float32Array;
   /** 1 when the quest is main scenario */
   main: Uint8Array;
+  /** 1 when the quest counts as finished — ticked, or a prerequisite of something ticked */
+  done: Uint8Array;
   /** index into `groups` */
   group: Uint8Array;
   groups: ColorGroup[];
@@ -45,12 +47,18 @@ export interface EdgeModel {
   count: number;
 }
 
-export function buildNodeModel(nodes: Quest[], pos: Map<number, NodePos>, theme: Theme): NodeModel {
+export function buildNodeModel(
+  nodes: Quest[],
+  pos: Map<number, NodePos>,
+  theme: Theme,
+  done?: Set<number>,
+): NodeModel {
   const palette: Palette = paletteFor(theme);
   const count = nodes.length;
   const x = new Float32Array(count);
   const y = new Float32Array(count);
   const main = new Uint8Array(count);
+  const finished = new Uint8Array(count);
   const group = new Uint8Array(count);
   const byId = new Map<number, number>();
 
@@ -74,6 +82,7 @@ export function buildNodeModel(nodes: Quest[], pos: Map<number, NodePos>, theme:
 
     const isMain = q.js === 0 || q.js === 1;
     main[i] = isMain ? 1 : 0;
+    finished[i] = done?.has(q.id) ? 1 : 0;
 
     const c = palette.sections[q.js] ?? palette.fallback;
     const key = `${c.r},${c.g},${c.b}`;
@@ -100,7 +109,7 @@ export function buildNodeModel(nodes: Quest[], pos: Map<number, NodePos>, theme:
     minX = minY = maxX = maxY = 0;
   }
 
-  return { quests: nodes, count, x, y, main, group, groups: colorGroups, byId, minX, minY, maxX, maxY };
+  return { quests: nodes, count, x, y, main, done: finished, group, groups: colorGroups, byId, minX, minY, maxX, maxY };
 }
 
 export function buildEdgeModel(nodes: Quest[], byId: Map<number, number>, showLocks: boolean): EdgeModel {
