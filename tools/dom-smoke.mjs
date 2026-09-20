@@ -137,6 +137,11 @@ const $ = (s) => window.document.querySelector(s);
 const $$ = (s) => [...window.document.querySelectorAll(s)];
 const text = (s) => $(s)?.textContent.replace(/\s+/g, ' ').trim() ?? null;
 const click = (el) => el && el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+const setValue = (el, v) => {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(el, v);
+  el.dispatchEvent(new window.Event('input', { bubbles: true }));
+};
 const evaluateInPage = (expr) => window.eval(expr);
 
 /* ------------------------------------------- default language from navigator */
@@ -204,6 +209,21 @@ if (target) {
   // vanish and shifts every row under the cursor.
   check('the category fields survive a narrowing selection', $$('.fgroup-search').length === 2, `${$$('.fgroup-search').length} fields`);
   check('marker icons appear once the view is small enough', $$('.legend img.legend-icon').length === 3, `${$$('.legend img.legend-icon').length} icons`);
+
+  // A result outside the current filter is flagged; the label must follow the UI
+  // language (it used to be the hard-coded English word "filtered").
+  {
+    const mainScenario = DATA.quests.find((q) => q.js === 0 && q.cn && q.cn.trim().length > 1);
+    const box = $('.search input');
+    setValue(box, mainScenario.cn);
+    await sleep(600);
+    const badge = text('.search-pop .shidden');
+    console.log('   out-of-filter badge:', badge, `(${mainScenario.cn})`);
+    check('an out-of-filter result is flagged', !!badge, String(badge));
+    check('the flag follows the UI language', badge === '被筛掉', String(badge));
+    setValue(box, '');
+    await sleep(300);
+  }
   check(
     'the legend offers all three quest-marker icons',
     new Set($$('.legend img.legend-icon').map((i) => i.getAttribute('src'))).size === 3,
@@ -219,12 +239,24 @@ if (target) {
 /* ----------------------------------------------------------------- search */
 console.log('\n--- search + jump ---');
 const input = $('.search input');
-const setValue = (el, v) => {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-  setter.call(el, v);
-  el.dispatchEvent(new window.Event('input', { bubbles: true }));
-};
-input.focus();
+
+/* shortcut: ⌘K / Ctrl+K from anywhere, "/" from anywhere except a text field */
+check('the field advertises its shortcut', !!$('.search-kbd'), String(text('.search-kbd')));
+input.blur();
+const ctrlK = new window.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true });
+window.document.dispatchEvent(ctrlK);
+await sleep(150);
+check('Ctrl+K focuses the search field', window.document.activeElement === input && ctrlK.defaultPrevented, String(window.document.activeElement?.className));
+input.blur();
+const slash = new window.KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+window.document.body.dispatchEvent(slash);
+await sleep(150);
+check('"/" focuses the search field too', window.document.activeElement === input && slash.defaultPrevented, String(window.document.activeElement?.className));
+// …but inside the field a "/" is just a character: the shortcut must not hijack it
+const typedSlash = new window.KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+input.dispatchEvent(typedSlash);
+check('"/" typed inside the field is left alone', !typedSlash.defaultPrevented && window.document.activeElement === input);
+
 setValue(input, '苍鹰归巢作战');
 await sleep(700);
 const results = $$('.search-pop li button').map((b) => b.textContent.replace(/\s+/g, ' ').trim());
@@ -232,6 +264,55 @@ console.log('   results:', results.slice(0, 3));
 check('search produced a result', results.some((r) => r.includes('苍鹰归巢作战')), results.join(' | '));
 click($$('.search-pop li button')[0]);
 await sleep(1500);
+
+/* --------------------------------------------------------- search history */
+console.log('\n--- recently viewed quests ---');
+{
+  const KEY = 'xiv-quest-tree:recent-quests';
+  const stored = () => JSON.parse(window.localStorage.getItem(KEY) || '[]');
+  check('opening a result remembers the quest it was', stored()[0] === 69477, JSON.stringify(stored()));
+  check('the history is capped at five entries', stored().length <= 5, `${stored().length} entries`);
+
+  const second = DATA.quests.find((q) => q.cn === '博兹雅堡垒蒸发事件');
+  setValue(input, second.cn);
+  await sleep(700);
+  const hit = $$('.search-pop li button').find((b) => b.textContent.includes(second.cn));
+  check('the second quest is found', !!hit, second.cn);
+  click(hit);
+  await sleep(1400);
+  check('the newest visit goes to the front', stored()[0] === second.id && stored()[1] === 69477, JSON.stringify(stored()));
+
+  input.focus();
+  await sleep(400);
+  const rows = $$('.search-hist .hist-go').map((b) => b.textContent.replace(/\s+/g, ' ').trim());
+  console.log('   recent:', rows.join(' | '));
+  check(
+    'an empty field lists the quests just opened, newest first',
+    rows.length === 2 && rows[0].includes(second.cn) && rows[1].includes('苍鹰归巢作战'),
+    rows.join(' | '),
+  );
+
+  // clicking a recent entry jumps straight back to that quest — no typing, no result list
+  click($$('.search-hist .hist-go')[1]);
+  await sleep(1500);
+  check('clicking a recent quest jumps back to it', text('.detail h2') === '苍鹰归巢作战', String(text('.detail h2')));
+
+  input.focus();
+  await sleep(400);
+  const before = $$('.search-hist .hist-go').length;
+  click($('.search-hist .hist-x'));
+  await sleep(400);
+  check(
+    'a single recent quest can be removed',
+    $$('.search-hist .hist-go').length === before - 1 && stored().length === before - 1,
+    `${before} -> ${stored().length}`,
+  );
+  click($('.search-hist .hist-clear'));
+  await sleep(300);
+  check('the whole recent list can be cleared', stored().length === 0 && !$('.search-hist'), JSON.stringify(stored()));
+  input.blur();
+  await sleep(300);
+}
 
 const detail = {
   title: text('.detail h2'),

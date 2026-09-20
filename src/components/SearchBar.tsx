@@ -5,6 +5,35 @@ import { sectionVar } from '../graph/theme.ts';
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
+const HISTORY_KEY = 'xiv-quest-tree:recent-quests';
+const HISTORY_MAX = 5;
+
+/**
+ * Recently opened quests, newest first.
+ *
+ * Ids, not the query text: what a visitor wants to get back to is the quest they opened,
+ * and an id renders in whatever language the UI is in right now. Never throws — storage
+ * can be unavailable (private mode).
+ */
+function loadHistory(): number[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v): v is number => typeof v === 'number' && Number.isFinite(v)).slice(0, HISTORY_MAX);
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(list: number[]): void {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {
+    // private mode / quota: the list still works for this session
+  }
+}
+
 interface Props {
   quests: Quest[];
   visible: Set<number>;
@@ -18,9 +47,21 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [recent, setRecent] = useState<number[]>(loadHistory);
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  // The badge shows the platform's own modifier, the way docs sites do it.
+  const [modifier] = useState(() => (typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent) ? '⌘' : 'Ctrl'));
 
   const results = useMemo(() => (query.trim().length ? searchQuests(quests, query, lang, 40) : []), [quests, query, lang]);
+
+  // Ids that no longer exist (dataset rebuilt) simply drop out of the list.
+  const recentQuests = useMemo(() => {
+    const byId = new Map(quests.map((q) => [q.id, q]));
+    return recent.filter((id) => byId.has(id)).map((id) => byId.get(id)!);
+  }, [recent, quests]);
+
+  const showingHistory = open && !query.trim() && recentQuests.length > 0;
 
   useEffect(() => {
     onMatches(new Set(results.map((q) => q.id)));
@@ -34,13 +75,67 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
+  /* Keyboard shortcut: ⌘K / Ctrl+K from anywhere, and a bare "/" as long as the user is
+     not already typing in a field (where "/" is a character they meant to type). Both
+     only move focus — the results appear as soon as there is a query. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = inputRef.current;
+      if (!el) return;
+      const isCmdK = (e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k';
+      if (isCmdK) {
+        e.preventDefault();
+        el.focus();
+        el.select();
+        setOpen(true);
+        return;
+      }
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      e.preventDefault();
+      el.focus();
+      setOpen(true);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   useEffect(() => setActive(0), [query]);
 
+  const remember = (id: number) => {
+    setRecent((prev) => {
+      const next = [id, ...prev.filter((h) => h !== id)].slice(0, HISTORY_MAX);
+      saveHistory(next);
+      return next;
+    });
+  };
+
+  const forget = (id: number) => {
+    setRecent((prev) => {
+      const next = prev.filter((h) => h !== id);
+      saveHistory(next);
+      return next;
+    });
+  };
+
+  const clearHistory = () => {
+    setRecent([]);
+    saveHistory([]);
+    inputRef.current?.focus();
+  };
+
+  /** Opens a quest: remember it, jump to it, and leave the field clean. */
   const commit = (id: number) => {
+    remember(id);
     onPick(id);
     setOpen(false);
     setQuery('');
+    inputRef.current?.blur();
   };
+
+  const listLength = query.trim() ? results.length : recentQuests.length;
 
   return (
     <div className="search" ref={boxRef}>
@@ -48,9 +143,11 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
         ⌕
       </span>
       <input
+        ref={inputRef}
         value={query}
         spellCheck={false}
         placeholder={t('search.placeholder')}
+        aria-keyshortcuts="Control+K Meta+K /"
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
@@ -62,12 +159,13 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
             (e.target as HTMLInputElement).blur();
           } else if (e.key === 'ArrowDown') {
             e.preventDefault();
-            setActive((a) => Math.min(results.length - 1, a + 1));
+            setActive((a) => Math.min(listLength - 1, a + 1));
           } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             setActive((a) => Math.max(0, a - 1));
-          } else if (e.key === 'Enter' && results[active]) {
-            commit(results[active].id);
+          } else if (e.key === 'Enter') {
+            if (query.trim() && results[active]) commit(results[active].id);
+            else if (!query.trim() && recentQuests[active]) commit(recentQuests[active].id);
           }
         }}
       />
@@ -78,11 +176,52 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
           onClick={() => {
             setQuery('');
             setOpen(false);
+            inputRef.current?.focus();
           }}
-          aria-label="clear"
+          aria-label={t('search.clear')}
         >
           ×
         </button>
+      ) : (
+        <kbd className="search-kbd" title={t('search.shortcut')} aria-hidden>
+          {modifier === '⌘' ? '⌘K' : 'Ctrl K'}
+        </kbd>
+      )}
+
+      {showingHistory ? (
+        <div className="search-pop search-hist">
+          <p className="search-count">
+            <span>{t('search.recent')}</span>
+            <button type="button" className="hist-clear" onClick={clearHistory}>
+              {t('search.clearHistory')}
+            </button>
+          </p>
+          <ul>
+            {recentQuests.map((q, i) => (
+              <li key={q.id} className="hist-row">
+                <button
+                  type="button"
+                  className={'hist-go' + (i === active ? ' on' : '')}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => commit(q.id)}
+                >
+                  <span className="sdot" style={{ background: sectionVar(q.js) }} />
+                  <span className="sname">{nameOf(q, lang)}</span>
+                  <span className="salt">{lang === 'cn' ? q.en : q.cn}</span>
+                  <span className="slv">{q.lv ? `Lv.${q.lv}` : ''}</span>
+                </button>
+                <button
+                  type="button"
+                  className="hist-x"
+                  aria-label={t('search.removeHistory', { name: nameOf(q, lang) })}
+                  onClick={() => forget(q.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {open && query.trim() ? (
@@ -107,7 +246,7 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
                         <span className="sname">{nameOf(q, lang)}</span>
                         <span className="salt">{lang === 'cn' ? q.en : q.cn}</span>
                         <span className="slv">{q.lv ? `Lv.${q.lv}` : ''}</span>
-                        {hidden ? <span className="shidden">filtered</span> : null}
+                        {hidden ? <span className="shidden">{t('search.filtered')}</span> : null}
                       </button>
                     </li>
                   );

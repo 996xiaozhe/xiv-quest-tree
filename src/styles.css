@@ -295,21 +295,52 @@ input {
 .search input::placeholder {
   color: var(--muted);
 }
+/* A bare <button> carries UA padding, which pushed the glyph off-centre; the grid
+   centring below is what actually lines "×" up with the middle of the field. */
 .search-clear {
   position: absolute;
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  display: grid;
+  place-items: center;
   width: 22px;
   height: 22px;
+  padding: 0;
+  line-height: 1;
   border: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
 }
 .search-clear:hover {
   color: var(--gold);
+}
+/* Shortcut hint, in place of the clear button while the field is empty. It steps aside
+   once the field is in use, so it never competes with what the user is typing. */
+.search-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.7188rem;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+.search:focus-within .search-kbd {
+  display: none;
+}
+@media (max-width: 780px) {
+  .search-kbd {
+    display: none;
+  }
 }
 
 .search-pop {
@@ -394,6 +425,59 @@ input {
   border: 1px solid var(--flag-line);
   padding: 0 4px;
   border-radius: 2px;
+}
+
+/* ------------------------------------------------------- search history -- */
+
+/* Same surface as the result list, but the entries are editable: each row carries a
+   "forget this one" button, and the header a "clear all". */
+.search-hist .search-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hist-clear {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--gold-dim);
+  font: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.hist-clear:hover {
+  color: var(--gold-bright);
+}
+.search-hist .hist-row {
+  display: flex;
+  align-items: center;
+}
+.search-hist li .hist-go {
+  /* the shared rule sets width:100%, which in this flex row would push the "×" out */
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.search-hist li .hist-x {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  padding: 0;
+  line-height: 1;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+.search-hist li .hist-x:hover {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
 }
 
 /* ----------------------------------------------------------------- langs -- */
