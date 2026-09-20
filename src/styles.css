@@ -580,16 +580,22 @@ input {
 .link-btn:hover {
   color: var(--gold-bright);
 }
+/* Sits above a list whose rows are 0.8438rem, so it borrows that size: at 0.9375rem the
+   placeholder filled the box edge to edge instead of looking like a field. */
 .fgroup-search {
   width: 100%;
-  height: 38px;
+  height: 42px;
   margin-bottom: 6px;
-  padding: 0 10px;
-  font-size: 0.9375rem;
+  padding: 0 11px;
+  font-size: 0.8438rem;
+  letter-spacing: 0.02em;
   background: var(--field);
   border: 1px solid var(--line);
   border-radius: 2px;
   outline: none;
+}
+.fgroup-search::placeholder {
+  color: var(--muted);
 }
 .fgroup-search:focus {
   border-color: var(--line-strong);
