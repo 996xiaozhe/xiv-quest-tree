@@ -37,6 +37,8 @@ const LANG_KEY = 'xiv-quest-tree:lang';
 const THEME_KEY = 'xiv-quest-tree:theme';
 /** Explicitly ticked quests; everything they imply is derived from these. */
 const DONE_KEY = 'xiv-quest-tree:done';
+/** Set once the "mark quests to see what is left" hint has been dismissed. */
+const HINT_KEY = 'xiv-quest-tree:hint-done';
 /** Where the top-bar GitHub mark points. */
 const REPO_URL = 'https://github.com/996xiaozhe/xiv-quest-tree';
 
@@ -100,6 +102,15 @@ function saveDone(ids: Set<number>): void {
   }
 }
 
+/** True once the progress hint has been dismissed — it should not nag on every visit. */
+function hintWasDismissed(): boolean {
+  try {
+    return localStorage.getItem(HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export default function App() {
   const [data, setData] = useState<QuestData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +126,7 @@ export default function App() {
   const [routeMiss, setRouteMiss] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null);
   const [doneIds, setDoneIds] = useState<Set<number>>(loadDone);
+  const [hintGone, setHintGone] = useState(hintWasDismissed);
   const graphRef = useRef<GraphHandle | null>(null);
   const nonceRef = useRef(0);
 
@@ -342,6 +354,16 @@ export default function App() {
     saveDone(new Set());
   }, []);
 
+  /** Puts the "here is how progress works" hint away for good. */
+  const dismissHint = useCallback(() => {
+    setHintGone(true);
+    try {
+      localStorage.setItem(HINT_KEY, '1');
+    } catch {
+      // storage unavailable: it is dismissed for this session at least
+    }
+  }, []);
+
   /**
    * Enters the dependency view. The address bar is deliberately left alone: the view
    * is reachable from /pre/<name> and /post/<name>, but browsing must not rewrite the
@@ -563,6 +585,24 @@ export default function App() {
                 onPick={handleJump}
                 onMark={toggleDone}
               />
+            ) : null}
+
+            {/* …and until a first quest is ticked, this is where the list would be: a
+                one-off pointer at how to get one. */}
+            {dependency && depRoot && !doneIds.size && !hintGone ? (
+              <div className="dep-hint">
+                <strong>{t('dep.hintTitle')}</strong>
+                <span>{t('dep.hintBody')}</span>
+                <button
+                  type="button"
+                  className="dep-hint-x"
+                  onClick={dismissHint}
+                  aria-label={t('dep.hintClose')}
+                  title={t('dep.hintClose')}
+                >
+                  ×
+                </button>
+              </div>
             ) : null}
           </div>
 

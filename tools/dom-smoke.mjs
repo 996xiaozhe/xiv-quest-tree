@@ -545,6 +545,18 @@ check(
   `${$$('.legend img.legend-icon').length} icons`,
 );
 
+// Nothing has been ticked off yet, so the list's place is taken by a dismissible hint.
+{
+  const hint = $('.dep-hint');
+  console.log('   hint:', text('.dep-hint'));
+  check('an untracked player is told how progress works', !!hint && !!hint.querySelector('.dep-hint-x'), String(text('.dep-hint')));
+  check('no list is shown before a first tick', !$('.dep-next'));
+  click($('.dep-hint-x'));
+  await sleep(300);
+  check('the hint can be dismissed', !$('.dep-hint'));
+  check('and stays dismissed', window.localStorage.getItem('xiv-quest-tree:hint-done') === '1', String(window.localStorage.getItem('xiv-quest-tree:hint-done')));
+}
+
 // Clicking a chip that is part of the view must move the camera, not throw the view away.
 {
   const chip = $$('.detail .chip').find((c) => c.textContent.trim().length > 0);
