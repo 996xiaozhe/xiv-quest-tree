@@ -228,10 +228,12 @@ input {
   z-index: 20;
 }
 
+/* 18px, not the 13px it first had: the mark is rotated 45°, so its corners already reach
+   ~6px past its 30px box and the visual gap read as about half of the number. */
 .brand {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 18px;
   min-width: 0;
 }
 .brand-mark {
