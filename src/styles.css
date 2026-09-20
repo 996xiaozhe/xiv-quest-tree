@@ -480,34 +480,54 @@ input {
   background: color-mix(in srgb, var(--gold) 10%, transparent);
 }
 
-/* ----------------------------------------------------------------- langs -- */
+/* ------------------------------------------------------------- topbar tools -- */
 
-.langs {
+/* Language, theme and the repository link read as one cluster, so they sit at a tighter
+   rhythm than the top bar's own 22px gap. */
+.topbar-tools {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 7px;
   flex: 0 0 auto;
 }
-.langs button {
-  min-width: 48px;
-  height: 38px;
-  padding: 0 13px;
-  background: var(--field);
+
+/* ----------------------------------------------------------------- langs -- */
+
+/* Three mutually exclusive options, so this stays a one-click segmented control rather
+   than a dropdown: the current language is always visible, and switching costs one click
+   instead of two. Joined into a single control (shared dividers, only the outer corners
+   rounded) because three separate boxes next to the search field read as clutter. */
+.langs {
+  display: flex;
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  background: var(--field);
+  overflow: hidden;
+}
+.langs button {
+  min-width: 46px;
+  height: 36px;
+  padding: 0 11px;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--line);
   color: var(--text-dim);
   cursor: pointer;
   letter-spacing: 0.06em;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s;
+}
+.langs button:first-child {
+  border-left: 0;
 }
 .langs button:hover {
-  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
   color: var(--gold-bright);
 }
 .langs button.on {
-  background: color-mix(in srgb, var(--gold) 22%, transparent);
-  border-color: var(--gold-dim);
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
   color: var(--gold-bright);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--gold) 20%, transparent);
+  font-weight: 600;
 }
 
 /* ------------------------------------------------------------ theme toggle -- */
@@ -542,6 +562,33 @@ input {
   width: 18px;
   height: 18px;
   color: var(--gold);
+}
+
+/* GitHub mark at the far right of the top bar — the same square as the theme toggle, so
+   the two read as one cluster. */
+.gh-link {
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  transition: all 0.16s;
+}
+.gh-link:hover {
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--gold) 12%, var(--field));
+}
+.gh-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.gh-link svg {
+  display: block;
 }
 
 /* ------------------------------------------------------------------ body -- */

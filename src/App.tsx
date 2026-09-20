@@ -30,6 +30,8 @@ import { ICON_JOB, ICON_MAIN, ICON_SIDE, markerIconForQuest, markerIconUrl } fro
 
 const LANG_KEY = 'xiv-quest-tree:lang';
 const THEME_KEY = 'xiv-quest-tree:theme';
+/** Where the top-bar GitHub mark points. */
+const REPO_URL = 'https://github.com/996xiaozhe/xiv-quest-tree';
 
 interface FocusRequest {
   id: number;
@@ -366,47 +368,65 @@ export default function App() {
           onMatches={setMatches}
         />
 
-        <div className="langs">
-          {LANGS.map((l) => (
-            <button key={l} type="button" className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>
-              {LANG_SHORT[l]}
-            </button>
-          ))}
-        </div>
+        {/* Language, theme and the repository link are one cluster, so they sit closer to
+            each other than the top bar's own 22px rhythm. */}
+        <div className="topbar-tools">
+          <div className="langs">
+            {LANGS.map((l) => (
+              <button key={l} type="button" className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>
+                {LANG_SHORT[l]}
+              </button>
+            ))}
+          </div>
 
-        <button
-          type="button"
-          className="theme-toggle"
-          title={t(theme === 'day' ? 'theme.toNight' : 'theme.toDay')}
-          aria-label={t(theme === 'day' ? 'theme.toNight' : 'theme.toDay')}
-          aria-pressed={theme === 'day'}
-          onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}
-        >
-          {/* Drawn as SVG rather than a ☀/☾ glyph: the two glyphs come from different
-              fonts at different optical sizes, so a text icon made the button (and the
-              whole right-hand cluster) jump every time the theme flipped. */}
-          <svg
-            className="theme-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            aria-hidden
-            focusable="false"
+          <button
+            type="button"
+            className="theme-toggle"
+            title={t(theme === 'day' ? 'theme.toNight' : 'theme.toDay')}
+            aria-label={t(theme === 'day' ? 'theme.toNight' : 'theme.toDay')}
+            aria-pressed={theme === 'day'}
+            onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}
           >
-            {theme === 'day' ? (
-              <path d="M20.4 14.8A8.6 8.6 0 0 1 9.2 3.6a8.7 8.7 0 1 0 11.2 11.2Z" />
-            ) : (
-              <>
-                <circle cx="12" cy="12" r="4.1" />
-                <path d="M12 2.7v2.6M12 18.7v2.6M2.7 12h2.6M18.7 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9" />
-              </>
-            )}
-          </svg>
-        </button>
+            {/* Drawn as SVG rather than a ☀/☾ glyph: the two glyphs come from different
+                fonts at different optical sizes, so a text icon made the button (and the
+                whole right-hand cluster) jump every time the theme flipped. */}
+            <svg
+              className="theme-icon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              aria-hidden
+              focusable="false"
+            >
+              {theme === 'day' ? (
+                <path d="M20.4 14.8A8.6 8.6 0 0 1 9.2 3.6a8.7 8.7 0 1 0 11.2 11.2Z" />
+              ) : (
+                <>
+                  <circle cx="12" cy="12" r="4.1" />
+                  <path d="M12 2.7v2.6M12 18.7v2.6M2.7 12h2.6M18.7 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9" />
+                </>
+              )}
+            </svg>
+          </button>
+
+          <a
+            className="gh-link"
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            title={t('app.github')}
+            aria-label={t('app.github')}
+          >
+            {/* The classic GitHub mark, as a path so it needs no icon font or image. */}
+            <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden focusable="false">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+            </svg>
+          </a>
+        </div>
       </header>
 
       <div className="body">

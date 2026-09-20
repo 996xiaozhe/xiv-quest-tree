@@ -187,6 +187,13 @@ check('all four filter groups present', initial.groups.length >= 4, initial.grou
 check('stats report the full dataset', /5377/.test(initial.stats || ''), initial.stats);
 check('legend rendered inside the stage', initial.legend.length > 0, initial.legend.join(' / '));
 check('three language buttons', initial.langs.length === 3, initial.langs.join(','));
+{
+  // The GitHub mark sits to the right of the theme toggle and points at the repository.
+  const gh = $('a.gh-link');
+  check('the top bar links to the repository', gh?.getAttribute('href') === 'https://github.com/996xiaozhe/xiv-quest-tree', String(gh?.getAttribute('href')));
+  check('the repository link opens in a new tab', gh?.getAttribute('target') === '_blank' && gh?.getAttribute('rel') === 'noreferrer noopener', `${gh?.getAttribute('target')} / ${gh?.getAttribute('rel')}`);
+  check('the GitHub mark is inline SVG, not an image', !!gh?.querySelector('svg path'));
+}
 check('detail panel starts empty', initial.detailEmpty);
 check('the legend lists marker icons only in the small view', $$('.legend img.legend-icon').length === 0, `${$$('.legend img.legend-icon').length} icons`);
 await sleep(400);

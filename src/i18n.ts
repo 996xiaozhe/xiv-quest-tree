@@ -40,6 +40,7 @@ const zh: Dict = {
   'app.subtitle': '全任务依赖关系 · 前置与后续 · 中英日三语',
   'app.loading': '正在载入任务数据…',
   'app.loadError': '任务数据载入失败',
+  'app.github': '在 GitHub 上查看源码',
 
   'lang.label': '语言',
   'theme.day': '日间',
@@ -155,6 +156,7 @@ const en: Dict = {
   'app.subtitle': 'Every quest and its dependencies · trilingual · zoomable',
   'app.loading': 'Loading quest data…',
   'app.loadError': 'Failed to load quest data',
+  'app.github': 'View the source on GitHub',
 
   'lang.label': 'Language',
   'theme.day': 'Day',
@@ -270,6 +272,7 @@ const ja: Dict = {
   'app.subtitle': '全クエストの依存関係 · 前提/後続 · 中日英対応',
   'app.loading': 'クエストデータを読み込み中…',
   'app.loadError': 'クエストデータの読み込みに失敗しました',
+  'app.github': 'GitHub でソースを見る',
 
   'lang.label': '言語',
   'theme.day': 'デイ',
