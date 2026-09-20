@@ -199,6 +199,19 @@ check('stats report the full dataset', /5377/.test(initial.stats || ''), initial
   check('nothing else was fetched during boot', fetchedUrls.length === 1, fetchedUrls.join(' | '));
 }
 check('legend rendered inside the stage', initial.legend.length > 0, initial.legend.join(' / '));
+{
+  // First visit: a bubble under the search field says what it is for. It is dismissed by
+  // its own ×, by focusing the field, and never comes back.
+  const tip = $('.search .search-tip');
+  console.log('   search tip:', text('.search-tip'));
+  check('a first visit is pointed at the search field', !!tip && !!tip.querySelector('.search-tip-x'), String(text('.search-tip')));
+  check('the tip sits inside the search box, so it can point at it', !!$('.search > .search-tip'));
+  check('nothing has been remembered yet', window.localStorage.getItem('xiv-quest-tree:hint-search') === null);
+  click($('.search-tip-x'));
+  await sleep(300);
+  check('the tip can be dismissed', !$('.search-tip'));
+  check('and stays dismissed', window.localStorage.getItem('xiv-quest-tree:hint-search') === '1', String(window.localStorage.getItem('xiv-quest-tree:hint-search')));
+}
 check('three language buttons', initial.langs.length === 3, initial.langs.join(','));
 {
   // The GitHub mark sits to the right of the theme toggle and points at the repository.
@@ -353,6 +366,17 @@ console.log(JSON.stringify({ ...detail, kv: detail.kv.slice(0, 9) }, null, 1));
 console.log('   chips:', detail.chips);
 
 check('detail title is the quest', detail.title === '苍鹰归巢作战', String(detail.title));
+{
+  // First quest selected: a bubble to the left of the dependency button points at it.
+  const tip = $('.cta-tip');
+  console.log('   cta tip:', text('.cta-tip'));
+  check('opening a quest points at the dependency button', !!tip && !!tip.querySelector('.cta-tip-x'), String(text('.cta-tip')));
+  check('the pointer is anchored on the button it describes', /点这里追踪/.test(text('.cta-tip') ?? ''), String(text('.cta-tip')));
+  click($('.cta-tip-x'));
+  await sleep(300);
+  check('the pointer can be dismissed', !$('.cta-tip'));
+  check('and stays dismissed', window.localStorage.getItem('xiv-quest-tree:hint-cta') === '1', String(window.localStorage.getItem('xiv-quest-tree:hint-cta')));
+}
 check('detail header shows the quest-marker icon', /\/icons\/71221\.png/.test($('.detail-icon')?.getAttribute('src') ?? ''), String($('.detail-icon')?.getAttribute('src')));
 check('detail shows the other two names', detail.alt.length === 2, detail.alt.join(' / '));
 check('detail shows patch 5.35', detail.kv.some((k) => k.includes('5.35')));

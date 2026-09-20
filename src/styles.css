@@ -14,6 +14,9 @@ html {
   --panel: rgba(15, 19, 26, 0.94);
   --panel-2: rgba(21, 26, 35, 0.9);
   --panel-3: rgba(27, 33, 44, 0.86);
+  /* One-off hints: a touch deeper than the panels they sit next to, so the eye lands on
+     the tip rather than on the ordinary surface it shares a shape with. */
+  --panel-tip: rgba(7, 10, 15, 0.97);
   --gold: #d9b877;
   --gold-bright: #f4e0ac;
   --gold-dim: color-mix(in srgb, var(--gold) 42%, transparent);
@@ -342,6 +345,137 @@ input {
 @media (max-width: 780px) {
   .search-kbd {
     display: none;
+  }
+}
+
+/* First-visit pointer under the search field: same surface as the result list, hung from
+   the field's left edge with a little arrow aimed up at its search icon, and it stays
+   away once seen. */
+.search-tip {
+  position: absolute;
+  top: calc(100% + 11px);
+  left: 0;
+  z-index: 45;
+  width: min(330px, 76vw);
+  padding: 10px 32px 11px 13px;
+  background: var(--panel-tip);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  animation: tip-in 0.22s ease-out;
+}
+.search-tip::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 28px;
+  width: 9px;
+  height: 9px;
+  background: var(--panel-tip);
+  border-left: 1px solid var(--line-strong);
+  border-top: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.search-tip-x {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.search-tip-x:hover {
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-tip {
+    animation: none;
+  }
+}
+
+/* The same idea for the dependency button in the detail panel: it hangs to the *left* of
+   the button with its arrow pointing right, and is portalled to <body> because the panel
+   scrolls and would clip anything sticking out of it. */
+.cta-tip {
+  position: fixed;
+  z-index: 55;
+  width: 264px;
+  transform: translate(-100%, -50%);
+  padding: 10px 32px 11px 13px;
+  background: var(--panel-tip);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  animation: cta-in 0.22s ease-out;
+}
+.cta-tip::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 5px);
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  background: var(--panel-tip);
+  border-right: 1px solid var(--line-strong);
+  border-top: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+@keyframes cta-in {
+  from {
+    opacity: 0;
+    transform: translate(calc(-100% + 6px), -50%);
+  }
+}
+.cta-tip-x {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.cta-tip-x:hover {
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-tip {
+    animation: none;
   }
 }
 
@@ -2101,6 +2235,7 @@ input {
   --panel: rgba(255, 253, 248, 0.95);
   --panel-2: rgba(252, 248, 240, 0.93);
   --panel-3: rgba(246, 241, 231, 0.9);
+  --panel-tip: rgba(232, 223, 205, 0.98);
   --gold: #9a7420;
   --gold-bright: #6d5010;
   --gold-dim: rgba(154, 116, 32, 0.45);

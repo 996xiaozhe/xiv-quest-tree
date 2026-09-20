@@ -7,6 +7,24 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 
 const HISTORY_KEY = 'xiv-quest-tree:recent-quests';
 const HISTORY_MAX = 5;
+/** Set once the first-visit pointer at the search field has been seen. */
+const TIP_KEY = 'xiv-quest-tree:hint-search';
+
+function tipSeen(): boolean {
+  try {
+    return localStorage.getItem(TIP_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberTipSeen(): void {
+  try {
+    localStorage.setItem(TIP_KEY, '1');
+  } catch {
+    // storage unavailable: it is dismissed for this session at least
+  }
+}
 
 /**
  * Recently opened quests, newest first.
@@ -48,6 +66,8 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [recent, setRecent] = useState<number[]>(loadHistory);
+  /** First visit only: a bubble under the field pointing out what it is for. */
+  const [tip, setTip] = useState(() => !tipSeen());
   const boxRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   // The badge shows the platform's own modifier, the way docs sites do it.
@@ -135,6 +155,12 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
     inputRef.current?.blur();
   };
 
+  /** Puts the first-visit tip away and remembers that it has been seen. */
+  const dismissTip = () => {
+    setTip(false);
+    rememberTipSeen();
+  };
+
   const listLength = query.trim() ? results.length : recentQuests.length;
 
   return (
@@ -152,7 +178,11 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
           setQuery(e.target.value);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true);
+          // using the field is the point of the tip, so it goes away for good
+          dismissTip();
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             setOpen(false);
@@ -187,6 +217,21 @@ export function SearchBar({ quests, visible, lang, t, onPick, onMatches }: Props
           {modifier === '⌘' ? '⌘K' : 'Ctrl K'}
         </kbd>
       )}
+
+      {tip && !query ? (
+        <div className="search-tip" role="note">
+          <button
+            type="button"
+            className="search-tip-x"
+            onClick={dismissTip}
+            aria-label={t('hint.close')}
+            title={t('hint.close')}
+          >
+            ×
+          </button>
+          {t('search.tip')}
+        </div>
+      ) : null}
 
       {showingHistory ? (
         <div className="search-pop search-hist">

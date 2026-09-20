@@ -1,4 +1,5 @@
-import { memo, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Lang, Quest, QuestData } from '../types.ts';
 import { isMainScenario } from '../types.ts';
 import { dictName, nameOf } from '../data.ts';
@@ -27,6 +28,16 @@ const LODESTONE = 'https://eu.finalfantasyxiv.com/lodestone/playguide/db/quest/'
 /** The Chinese FFXIV wiki files quests under the 任务 (quest) namespace. */
 const WIKI = 'https://ff14.huijiwiki.com/wiki/';
 const WIKI_NAMESPACE = '任务';
+/** Set once the pointer at the dependency button has been seen. */
+const CTA_TIP_KEY = 'xiv-quest-tree:hint-cta';
+
+function ctaTipSeen(): boolean {
+  try {
+    return localStorage.getItem(CTA_TIP_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Quest pages live at `任务:<name>`. The namespace separator stays a literal colon —
@@ -83,6 +94,38 @@ export const QuestDetail = memo(function QuestDetail({
   // Which quest's map is open. Storing the id (instead of a boolean) means selecting
   // another quest closes the panel on its own, with no effect to keep in sync.
   const [mapQuest, setMapQuest] = useState<number | null>(null);
+  /** First time a quest is opened: a pointer at the dependency button, to its left. */
+  const [ctaTip, setCtaTip] = useState(() => !ctaTipSeen());
+  const [ctaRect, setCtaRect] = useState<{ top: number; left: number; height: number } | null>(null);
+  const ctaRef = useRef<HTMLButtonElement | null>(null);
+
+  const dismissCtaTip = () => {
+    setCtaTip(false);
+    try {
+      localStorage.setItem(CTA_TIP_KEY, '1');
+    } catch {
+      // storage unavailable: dismissed for this session at least
+    }
+  };
+
+  // The tip is drawn in a portal, so it has to follow the button it points at rather than
+  // live inside the detail panel — which scrolls, and would clip anything hanging out of it.
+  useEffect(() => {
+    if (!ctaTip || !quest) return;
+    const measure = () => {
+      const el = ctaRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCtaRect({ top: r.top, left: r.left, height: r.height });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [ctaTip, quest]);
 
   if (!quest) {
     return (
@@ -267,7 +310,15 @@ export const QuestDetail = memo(function QuestDetail({
         </section>
 
         <div className="detail-actions">
-          <button type="button" className="primary" onClick={() => onDependency(quest.id, 'prev')}>
+          <button
+            ref={ctaRef}
+            type="button"
+            className="primary"
+            onClick={() => {
+              dismissCtaTip();
+              onDependency(quest.id, 'prev');
+            }}
+          >
             {t('menu.prereq')}
           </button>
           <button
@@ -279,6 +330,28 @@ export const QuestDetail = memo(function QuestDetail({
           </button>
         </div>
       </div>
+
+      {ctaTip && ctaRect
+        ? createPortal(
+            <div
+              className="cta-tip"
+              role="note"
+              style={{ top: ctaRect.top + ctaRect.height / 2, left: ctaRect.left - 12 }}
+            >
+              <button
+                type="button"
+                className="cta-tip-x"
+                onClick={dismissCtaTip}
+                aria-label={t('hint.close')}
+                title={t('hint.close')}
+              >
+                ×
+              </button>
+              {t('panel.ctaTip')}
+            </div>,
+            document.body,
+          )
+        : null}
 
       {mapQuest === quest.id && coords?.url ? (
         <MapPanel
