@@ -555,6 +555,23 @@ console.log('\n=== finished quests & what is available now ===');
   check('an unrelated quest can be ticked off as well', toggleMarked(new Set(), 66314, index).size === 1);
 }
 
+console.log('\n=== deploy config ===');
+{
+  const cfg = JSON.parse(await readFile('vercel.json', 'utf8'));
+  const sources = (cfg.rewrites ?? []).map((r) => r.source);
+  console.log('   rewrites:', sources.join(' | ') || '(none)');
+  // Only /pre and /post are application routes; static folders must not be rewritten, and
+  // an unmatched path has no page anyway. Explicit rules are used on purpose: a catch-all
+  // with a negative lookahead looked right but left every deep link on a 404.
+  check('deep links are rewritten to the app shell', sources.includes('/pre/:path*') && sources.includes('/post/:path*'), sources.join(' | '));
+  check('every rewrite ends at index.html', (cfg.rewrites ?? []).length > 0 && (cfg.rewrites ?? []).every((r) => r.destination === '/index.html'));
+  check('no rewrite can swallow the static folders', sources.every((s) => !s.startsWith('/((')), sources.join(' | '));
+  check('the dataset keeps revalidating, hashed assets stay immutable', JSON.stringify(cfg.headers).includes('must-revalidate') && JSON.stringify(cfg.headers).includes('immutable'));
+
+  const vite = await readFile('vite.config.ts', 'utf8');
+  check('the build copies that config into the artifact', /copyFileSync\(path\.resolve\('vercel\.json'\)/.test(vite));
+}
+
 console.log('\n=== layout ===');
 const t0 = Date.now();
 const layAll = layoutGraph(data.quests, index, { xStep: DEFAULT_X_STEP, yStep: DEFAULT_Y_STEP, isMain: isMainScenario });

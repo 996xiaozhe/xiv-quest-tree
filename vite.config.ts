@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { statSync } from 'node:fs';
+import { copyFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
@@ -31,8 +31,29 @@ export function buildRef(): string {
   }
 }
 
+/**
+ * Copies `vercel.json` into the build output.
+ *
+ * The SPA rewrites that make `/pre/<id>` and `/post/<id>` work live in the repository
+ * root, which is enough when Vercel builds from git — but uploading `dist/` (or the zip
+ * made from it) directly is just as normal, and then the deployment has no config at all
+ * and every deep link 404s. Shipping it inside the artifact makes the build self-contained.
+ */
+function copyDeployConfig(): Plugin {
+  return {
+    name: 'copy-vercel-config',
+    closeBundle() {
+      try {
+        copyFileSync(path.resolve('vercel.json'), path.resolve('dist/vercel.json'));
+      } catch {
+        // a missing vercel.json is not worth failing a build over
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), copyDeployConfig()],
   define: {
     __QUEST_DATA_BYTES__: JSON.stringify(dataByteSize()),
     __BUILD_REF__: JSON.stringify(buildRef()),
