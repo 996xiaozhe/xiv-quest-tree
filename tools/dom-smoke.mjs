@@ -171,6 +171,14 @@ check('react mounted into #root', initial.rootChildren > 0);
 check('graph canvas mounted and sized', initial.canvas && initial.canvasPx === '1280x720', String(initial.canvasPx));
 check('filter panel rendered', initial.filterItems > 10, `${initial.filterItems} items`);
 check('all four filter groups present', initial.groups.length >= 4, initial.groups.join(' | '));
+{
+  // The group titles are i18n strings; one of them used to append a literal translation,
+  // which rendered as "主分类 · 主分类" / "Category · Category".
+  const titles = $$('.fgroup h3').map((h) => h.textContent.trim());
+  const parts = titles.map((t) => t.split(/[·•]/).map((s) => s.trim()));
+  check('filter group titles are unique', new Set(titles).size === titles.length, titles.join(' | '));
+  check('no filter group title repeats itself', parts.every((p) => new Set(p).size === p.length), titles.join(' | '));
+}
 check('stats report the full dataset', /5377/.test(initial.stats || ''), initial.stats);
 check('legend rendered inside the stage', initial.legend.length > 0, initial.legend.join(' / '));
 check('three language buttons', initial.langs.length === 3, initial.langs.join(','));

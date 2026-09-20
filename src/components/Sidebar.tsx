@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import type { Filters, Lang } from '../types.ts';
+import type { Filters } from '../types.ts';
 import type { TaxoEntry, Taxonomy } from '../data.ts';
 import { sectionVar } from '../graph/theme.ts';
 
@@ -7,7 +7,6 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 
 interface Props {
   taxo: Taxonomy;
-  lang: Lang;
   t: T;
   filters: Filters;
   setFilters: (f: Filters) => void;
@@ -88,7 +87,7 @@ function FilterList({ title, items, selected, onToggle, onClear, t, colorFor, em
   );
 }
 
-export const Sidebar = memo(function Sidebar({ taxo, lang, t, filters, setFilters, totalCount, visibleCount }: Props) {
+export const Sidebar = memo(function Sidebar({ taxo, t, filters, setFilters, totalCount, visibleCount }: Props) {
   const patch = (p: Partial<Filters>) => setFilters({ ...filters, ...p });
 
   const categories = useMemo(() => {
@@ -169,7 +168,7 @@ export const Sidebar = memo(function Sidebar({ taxo, lang, t, filters, setFilter
           colorFor={sectionColor}
         />
         <FilterList
-          title={`${t('filter.category')} · ${lang === 'cn' ? '主分类' : 'Category'}`}
+          title={t('filter.category')}
           items={categories}
           selected={filters.jcat}
           onToggle={(id) => patch({ jcat: toggle(filters.jcat, id), jgen: new Set() })}
@@ -177,7 +176,7 @@ export const Sidebar = memo(function Sidebar({ taxo, lang, t, filters, setFilter
           t={t}
         />
         <FilterList
-          title={`${t('filter.genre')} · ${lang === 'cn' ? '子分类' : 'Subcategory'}`}
+          title={t('filter.genre')}
           items={genres}
           selected={filters.jgen}
           onToggle={(id) => patch({ jgen: toggle(filters.jgen, id) })}

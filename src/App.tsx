@@ -412,7 +412,6 @@ export default function App() {
       <div className="body">
         <Sidebar
           taxo={taxo}
-          lang={lang}
           t={t}
           filters={filters}
           setFilters={setFilters}
