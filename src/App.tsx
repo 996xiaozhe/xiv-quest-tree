@@ -16,6 +16,7 @@ import { Sidebar } from './components/Sidebar.tsx';
 import { QuestDetail } from './components/QuestDetail.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
 import { BootScreen } from './components/BootScreen.tsx';
+import { MarkerIcon } from './components/MarkerIcon.tsx';
 import {
   buildNameIndex,
   dependencyPath,
@@ -26,7 +27,7 @@ import {
 import { sectionVar } from './graph/theme.ts';
 import { DEP_ANCHOR, DEP_COLUMNS } from './graph/camera.ts';
 import type { Theme } from './graph/theme.ts';
-import { ICON_JOB, ICON_MAIN, ICON_SIDE, markerIconForQuest, markerIconUrl } from './graph/icons.ts';
+import { ICON_JOB, ICON_MAIN, ICON_SIDE, markerIconForQuest } from './graph/icons.ts';
 
 const LANG_KEY = 'xiv-quest-tree:lang';
 const THEME_KEY = 'xiv-quest-tree:theme';
@@ -552,7 +553,7 @@ export default function App() {
                       ] as const
                     ).map(([key, id]) => (
                       <li key={key}>
-                        <img className="legend-icon" src={markerIconUrl(id)} alt="" width={18} height={18} />
+                        <MarkerIcon className="legend-icon" id={id} size={18} />
                         {t(key)}
                       </li>
                     ))}
@@ -570,7 +571,7 @@ export default function App() {
             >
               <div className="ctx-head">
                 {visible.length <= 50 ? (
-                  <img src={markerIconUrl(markerIconForQuest(index.get(menu.id)!))} alt="" width={20} height={20} />
+                  <MarkerIcon id={markerIconForQuest(index.get(menu.id)!)} size={20} />
                 ) : null}
                 <span>{nameOf(index.get(menu.id)!, lang)}</span>
               </div>

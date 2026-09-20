@@ -7,3 +7,9 @@
  * reports 0 and the boot screen falls back to an indeterminate sweep.
  */
 declare const __QUEST_DATA_BYTES__: number;
+
+/**
+ * Commit this bundle was built from, injected by `vite.config.ts` and used to address the
+ * immutable jsDelivr mirror (see `src/cdn.ts`). Empty string when git was unavailable.
+ */
+declare const __BUILD_REF__: string;

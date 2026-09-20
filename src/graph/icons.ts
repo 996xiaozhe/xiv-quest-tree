@@ -1,4 +1,5 @@
 import type { Quest } from '../types.ts';
+import { cdnUrl } from '../cdn.ts';
 
 /**
  * Official FFXIV quest-marker icons, taken from the game's own icon atlas.
@@ -28,5 +29,11 @@ export function markerIconForQuest(q: Pick<Quest, 'js'>): number {
 
 const BASE_URL: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 
-/** URL of a marker icon, for use in plain <img> tags (legend, hover card). */
-export const markerIconUrl = (id: number): string => `${BASE_URL}icons/${id}.png`;
+/** The copy that ships with this deployment. */
+export const markerIconLocalUrl = (id: number): string => `${BASE_URL}icons/${id}.png`;
+
+/**
+ * URL of a marker icon, for use in plain <img> tags (legend, hover card, detail panel).
+ * Prefers the CDN mirror; `<MarkerIcon>` falls back to the local copy if it fails.
+ */
+export const markerIconUrl = (id: number): string => cdnUrl(`public/icons/${id}.png`) ?? markerIconLocalUrl(id);

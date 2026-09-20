@@ -1,17 +1,60 @@
 import type { Filters, Lang, Quest, QuestData, Trio } from './types.ts';
 import { LANG_INDEX } from './types.ts';
+import { cdnUrl } from './cdn.ts';
 
 const BASE_URL: string =
   (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 
 export const DATA_URL = `${BASE_URL}data/quests.json`;
 
+/** How long the CDN gets to send response headers before the local copy takes over. */
+const TTFB_TIMEOUT = 6000;
+
+/**
+ * Where the dataset is fetched from, in order: the jsDelivr mirror (fast on the Chinese
+ * network this site is built for) and then this deployment's own copy. Exported so the
+ * order itself can be asserted.
+ */
+export function datasetSources(): string[] {
+  const cdn = cdnUrl('public/data/quests.json');
+  return cdn ? [cdn, DATA_URL] : [DATA_URL];
+}
+
+/**
+ * Tries each source in turn and returns the first response that answers in time.
+ *
+ * The timeout only covers the wait for response headers — the body is streamed after
+ * this returns — and `fetchImpl` is injectable so the fallback can be tested without a
+ * network.
+ */
+export async function fetchFirstAvailable(
+  urls: string[],
+  fetchImpl: typeof fetch = fetch,
+  timeout = TTFB_TIMEOUT,
+): Promise<Response> {
+  let lastError: unknown = null;
+  for (const url of urls) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const res = await fetchImpl(url, { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    } catch (e) {
+      lastError = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('no data source answered');
+}
+
 let cache: Promise<QuestData> | null = null;
 
 /**
  * Loads the dataset, reporting download progress when the server sends a length.
  *
- * The payload is ~2.4 MB uncompressed, so a bare spinner gives no sense of how long
+ * The payload is ~2.5 MB uncompressed, so a bare spinner gives no sense of how long
  * is left. Streaming the body lets the boot screen show a real percentage; if the
  * response is not streamable (or has no Content-Length) it falls back to the plain
  * `res.json()` path and the caller keeps an indeterminate animation.
@@ -19,7 +62,7 @@ let cache: Promise<QuestData> | null = null;
 export function loadQuestData(onProgress?: (ratio: number) => void): Promise<QuestData> {
   if (!cache) {
     cache = (async () => {
-      const res = await fetch(DATA_URL);
+      const res = await fetchFirstAvailable(datasetSources());
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       // The uncompressed size is baked in at build time: Content-Length describes the

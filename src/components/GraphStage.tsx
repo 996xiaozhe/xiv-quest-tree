@@ -4,7 +4,8 @@ import { layoutGraph, DEFAULT_X_STEP, DEFAULT_Y_STEP } from '../graph/layout.ts'
 import { clampScale, focusViewport, scaleForColumns } from '../graph/camera.ts';
 import { drawGraph, DETAIL_MAX_QUESTS, type Viewport } from '../graph/render.ts';
 import { buildEdgeModel, buildNodeModel } from '../graph/model.ts';
-import { markerIconForQuest, markerIconUrl } from '../graph/icons.ts';
+import { markerIconForQuest } from '../graph/icons.ts';
+import { MarkerIcon } from './MarkerIcon.tsx';
 import { isMainScenario } from '../types.ts';
 import type { Theme } from '../graph/theme.ts';
 
@@ -419,7 +420,7 @@ export const GraphStage = forwardRef<GraphHandle, Props>(function GraphStage(pro
       />
       {hoveredQuest && nodes.length <= DETAIL_MAX_QUESTS ? (
         <div className="hover-tip">
-          <img className="tip-icon" src={markerIconUrl(markerIconForQuest(hoveredQuest))} alt="" width={22} height={22} />
+          <MarkerIcon className="tip-icon" id={markerIconForQuest(hoveredQuest)} size={22} />
           <div>
             <b>{(langIndex === 0 ? hoveredQuest.cn : langIndex === 1 ? hoveredQuest.en : hoveredQuest.ja) || hoveredQuest.en}</b>
             <span>

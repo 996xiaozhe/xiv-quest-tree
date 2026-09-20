@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { dataByteSize } from '../vite.config.ts';
+import { dataByteSize, buildRef } from '../vite.config.ts';
 
 /**
  * Builds the app as a single classic (IIFE) script so the DOM test can execute it
@@ -12,6 +12,8 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __QUEST_DATA_BYTES__: JSON.stringify(dataByteSize()),
+    // the real ref, so the DOM test exercises the same CDN URLs the deployed build uses
+    __BUILD_REF__: JSON.stringify(buildRef()),
   },
   build: {
     outDir: 'dist-test',

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'vite';
@@ -17,10 +18,24 @@ export function dataByteSize(): number {
   }
 }
 
+/**
+ * Commit the bundle is built from, baked in so the CDN mirror URLs are immutable (see
+ * `src/cdn.ts`). Empty when git is unavailable or the checkout has no commits yet, which
+ * simply makes the app serve the data from its own deployment.
+ */
+export function buildRef(): string {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+}
+
 export default defineConfig({
   plugins: [react()],
   define: {
     __QUEST_DATA_BYTES__: JSON.stringify(dataByteSize()),
+    __BUILD_REF__: JSON.stringify(buildRef()),
   },
   build: {
     target: 'es2022',

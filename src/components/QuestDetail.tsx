@@ -4,8 +4,9 @@ import { isMainScenario } from '../types.ts';
 import { dictName, nameOf } from '../data.ts';
 import { mapUrl } from '../map.ts';
 import { MapPanel } from './MapPanel.tsx';
+import { MarkerIcon } from './MarkerIcon.tsx';
 import { sectionVar } from '../graph/theme.ts';
-import { markerIconForQuest, markerIconUrl } from '../graph/icons.ts';
+import { markerIconForQuest } from '../graph/icons.ts';
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -107,7 +108,7 @@ export const QuestDetail = memo(function QuestDetail({ quest, data, index, lang,
       <div className="detail-head">
         <div className="detail-titles">
           <h2 style={{ borderColor: sectionVar(quest.js) }}>
-            <img className="detail-icon" src={markerIconUrl(markerIconForQuest(quest))} alt="" width={28} height={28} />
+            <MarkerIcon className="detail-icon" id={markerIconForQuest(quest)} size={28} />
             <span>{nameOf(quest, lang)}</span>
           </h2>
           <p className="detail-alt">

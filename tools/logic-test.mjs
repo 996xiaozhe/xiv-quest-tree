@@ -7,7 +7,9 @@ import { PALETTES, rgbToHex } from '../src/graph/theme.ts';
 import { buildNameIndex, dependencyPath, homePath, parseLocation, resolveRoute } from '../src/route.ts';
 import { mapUrl } from '../src/map.ts';
 import { chooseLang, firstSupportedLang } from '../src/i18n.ts';
-import { applyFilters, buildTaxonomy, dependencyClosure, prerequisiteSet, relatedSet, searchQuests } from '../src/data.ts';
+import { applyFilters, buildTaxonomy, datasetSources, dependencyClosure, fetchFirstAvailable, prerequisiteSet, relatedSet, searchQuests } from '../src/data.ts';
+import { cdnUrlFor } from '../src/cdn.ts';
+import { markerIconLocalUrl, markerIconUrl } from '../src/graph/icons.ts';
 import { layoutGraph, DEFAULT_X_STEP, DEFAULT_Y_STEP } from '../src/graph/layout.ts';
 import {
   COLUMN_STEP,
@@ -419,6 +421,58 @@ console.log('\n=== interactive map link ===');
   check('the ids point at many different maps', maps.length > 100, `${maps.length} maps`);
   const eagle = data.quests.find((q) => q.id === 69477);
   check('a known quest points at the map its NPC stands on', eagle.mp === 603, `map ${eagle.mp} at ${eagle.lode.x},${eagle.lode.y}`);
+}
+
+console.log('\n=== CDN mirror ===');
+{
+  check(
+    'a repository path becomes an immutable jsDelivr link',
+    cdnUrlFor('abc1234', 'public/data/quests.json') === 'https://cdn.jsdelivr.net/gh/996xiaozhe/xiv-quest-tree@abc1234/public/data/quests.json',
+    String(cdnUrlFor('abc1234', 'public/data/quests.json')),
+  );
+  check('leading slashes are tolerated', cdnUrlFor('abc1234', '/public/icons/71221.png')?.endsWith('/public/icons/71221.png') === true);
+  check('without a build ref there is no CDN link', cdnUrlFor('', 'public/data/quests.json') === null && cdnUrlFor('abc', '') === null);
+
+  // In plain Node there is no build ref, so the app must fall back to its own copy.
+  const sources = datasetSources();
+  check('with no build ref the dataset has one source: the local copy', sources.length === 1 && sources[0].endsWith('data/quests.json'), sources.join(' | '));
+  check('icons fall back to the local path too', markerIconUrl(71221) === markerIconLocalUrl(71221), markerIconUrl(71221));
+
+  // The fallback itself: a blocked CDN must not stop the app.
+  {
+    const tried = [];
+    const blocked = async (url) => {
+      tried.push(String(url));
+      if (String(url).includes('jsdelivr')) throw new Error('blocked');
+      return new Response('{"quests":[]}', { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const res = await fetchFirstAvailable(['https://cdn.jsdelivr.net/gh/x/y@z/public/data/quests.json', '/data/quests.json'], blocked, 50);
+    check('a blocked CDN falls back to the local copy', tried.length === 2 && res.status === 200, tried.map((u) => u.slice(0, 32)).join(' → '));
+    check('the fallback response is usable', (await res.json()).quests.length === 0);
+  }
+  {
+    const tried = [];
+    const ok = async (url) => {
+      tried.push(String(url));
+      return new Response('{"quests":[]}', { status: 200 });
+    };
+    await fetchFirstAvailable(['https://cdn.jsdelivr.net/gh/x/y@z/public/data/quests.json', '/data/quests.json'], ok, 50);
+    check('a healthy CDN is used first and only once', tried.length === 1 && tried[0].includes('jsdelivr'), tried.length + ' attempts');
+  }
+  {
+    const tried = [];
+    const failing = async (url) => {
+      tried.push(String(url));
+      throw new Error('offline');
+    };
+    let threw = false;
+    try {
+      await fetchFirstAvailable(['/a.json', '/b.json'], failing, 50);
+    } catch {
+      threw = true;
+    }
+    check('if every source fails the loader reports it', threw && tried.length === 2, tried.join(' → '));
+  }
 }
 
 console.log('\n=== layout ===');

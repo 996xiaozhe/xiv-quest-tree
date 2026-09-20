@@ -5,6 +5,7 @@
  *
  *   npx vite build --config tools/vite.iife.config.ts && node tools/dom-smoke.mjs
  */
+import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 
@@ -99,8 +100,10 @@ window.ReadableStream = ReadableStream;
 // jsdom never loads images, and nothing depends on it any more: the renderer draws no
 // marker bitmaps on nodes (every quest is a plain diamond), which is asserted below.
 const DATA_JSON = JSON.stringify(DATA);
+const fetchedUrls = [];
 window.fetch = async (input) => {
   const url = String(input);
+  fetchedUrls.push(url);
   if (url.includes('quests.json')) {
     // Mirror a real response: a Content-Length header plus a streamable body, so the
     // boot screen's progress path is the one under test.
@@ -185,6 +188,16 @@ check('all four filter groups present', initial.groups.length >= 4, initial.grou
   check('no filter group title repeats itself', parts.every((p) => new Set(p).size === p.length), titles.join(' | '));
 }
 check('stats report the full dataset', /5377/.test(initial.stats || ''), initial.stats);
+{
+  // The bundle is built with the commit baked in, so the dataset must be requested from
+  // the immutable jsDelivr mirror rather than from the deployment itself.
+  const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const expected = `https://cdn.jsdelivr.net/gh/996xiaozhe/xiv-quest-tree@${sha}/public/data/quests.json`;
+  const dataUrl = fetchedUrls.find((u) => u.includes('quests.json')) ?? '';
+  console.log('   dataset fetched from:', dataUrl);
+  check('the dataset comes from the CDN mirror', dataUrl === expected, dataUrl);
+  check('nothing else was fetched during boot', fetchedUrls.length === 1, fetchedUrls.join(' | '));
+}
 check('legend rendered inside the stage', initial.legend.length > 0, initial.legend.join(' / '));
 check('three language buttons', initial.langs.length === 3, initial.langs.join(','));
 {
@@ -227,13 +240,18 @@ if (target) {
     const badge = text('.search-pop .shidden');
     console.log('   out-of-filter badge:', badge, `(${mainScenario.cn})`);
     check('an out-of-filter result is flagged', !!badge, String(badge));
-    check('the flag follows the UI language', badge === '被筛掉', String(badge));
+    check('the flag follows the UI language', badge === '筛选外', String(badge));
     setValue(box, '');
     await sleep(300);
   }
   check(
     'the legend offers all three quest-marker icons',
     new Set($$('.legend img.legend-icon').map((i) => i.getAttribute('src'))).size === 3,
+    $$('.legend img.legend-icon').map((i) => i.getAttribute('src')).join(','),
+  );
+  check(
+    'marker icons come from the CDN mirror too',
+    $$('.legend img.legend-icon').every((i) => (i.getAttribute('src') ?? '').startsWith('https://cdn.jsdelivr.net/gh/996xiaozhe/xiv-quest-tree@')),
     $$('.legend img.legend-icon').map((i) => i.getAttribute('src')).join(','),
   );
   await sleep(400);

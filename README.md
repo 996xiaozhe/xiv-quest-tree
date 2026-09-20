@@ -36,7 +36,13 @@ npm run data:all   # 下载数据表 → 拉取多语言与坐标 → 重建 pub
 
 ## 部署
 
-纯静态站点，直接部署到 Vercel（框架选 Vite）或任何静态托管即可，无需环境变量。
+纯静态站点，直接部署到 Vercel（框架选 Vite）或任何静态托管即可，无需环境变量。构建产物也打包在 `release/xiv-quest-tree-dist.zip`（0.66 MB），可以从加速镜像直接下载：
+
+```
+https://cdn.jsdelivr.net/gh/996xiaozhe/xiv-quest-tree@main/release/xiv-quest-tree-dist.zip
+```
+
+数据集与图标会优先从 jsDelivr 拉取（国内可达，且服务端启用 brotli），链接里的 commit 在构建时写死，因此缓存永久有效、也不会与代码错位；CDN 不可用或该 commit 尚未推送时自动回退到本站自己的副本，`vite dev` 则始终读本地文件。
 
 ## 许可
 
