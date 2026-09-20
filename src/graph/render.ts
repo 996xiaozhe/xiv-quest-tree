@@ -46,6 +46,10 @@ export interface DrawInput {
  */
 export const DETAIL_MAX_QUESTS = 50;
 
+/** Opacity of a finished quest's diamond, and of its name. Enough to read, easy to skip. */
+const FINISHED_ALPHA = 0.3;
+const FINISHED_LABEL_ALPHA = 0.5;
+
 const LABEL_FONT = '"Segoe UI", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans", Meiryo, sans-serif';
 
 function diamond(p: Path2D, x: number, y: number, r: number): void {
@@ -80,7 +84,7 @@ export function drawGraph(input: DrawInput): void {
   const minY = vp.y - height / 2 / vp.scale - pad;
   const maxY = vp.y + height / 2 / vp.scale + pad;
 
-  const { x, y, count, groups, main } = model;
+  const { x, y, count, groups, main, done } = model;
   const hasSelection = selected != null || highlight != null;
 
   // One shape for every node: no icon is ever stacked on a diamond, so the size only
@@ -144,21 +148,37 @@ export function drawGraph(input: DrawInput): void {
   /* -------------------------------------------------------------------- nodes */
   // Counted while drawing: labels are gated on what is actually on screen, not on the
   // size of the filtered set, so zooming into the global graph still shows names.
+  // Finished quests are drawn as a second, fainter path per colour — the point of marking
+  // progress is that the eye skips them and lands on what is still open.
   const onScreen: number[] = [];
   for (const g of groups) {
     const idx = g.indices;
-    const path = new Path2D();
+    const solid = new Path2D();
+    const faint = new Path2D();
+    let faintCount = 0;
     for (let k = 0; k < idx.length; k++) {
       const i = idx[k];
       const px = x[i];
       if (px < minX || px > maxX) continue;
       const py = y[i];
       if (py < minY || py > maxY) continue;
-      diamond(path, px, py, radius(i));
+      if (done[i] === 1) {
+        diamond(faint, px, py, radius(i));
+        faintCount++;
+      } else {
+        diamond(solid, px, py, radius(i));
+      }
       onScreen.push(i);
     }
-    ctx.fillStyle = rgba(g.color, hasSelection ? 0.45 : 0.95);
-    ctx.fill(path);
+    // Full strength for everything that is not finished: dimming the rest of the graph
+    // whenever something is selected used to be a "focus" effect, but faint now means
+    // "already done", so the two readings would collide.
+    ctx.fillStyle = rgba(g.color, 0.95);
+    ctx.fill(solid);
+    if (faintCount) {
+      ctx.fillStyle = rgba(g.color, FINISHED_ALPHA);
+      ctx.fill(faint);
+    }
   }
 
   /* ---------------------------------------------------------- search matches */
@@ -258,8 +278,11 @@ export function drawGraph(input: DrawInput): void {
       const size = (important ? 18 : isMain ? 17 : 16) / vp.scale;
       ctx.font = `${important || isMain ? 600 : 500} ${size}px ${LABEL_FONT}`;
       ctx.fillStyle = important ? pal.labelHot : isMain ? pal.labelMain : pal.labelOther;
+      // a finished quest keeps its name readable, but steps back out of the way
+      ctx.globalAlpha = done[i] === 1 && !important ? FINISHED_LABEL_ALPHA : 1;
       const q = model.quests[i];
       ctx.fillText(nodeName(q, langIndex), x[i] + radius(i) + ringOuter(i, q.id) + 6 * px, y[i]);
+      ctx.globalAlpha = 1;
       drawn++;
     }
     ctx.shadowBlur = 0;
