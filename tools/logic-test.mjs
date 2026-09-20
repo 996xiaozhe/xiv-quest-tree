@@ -497,8 +497,23 @@ console.log('\n=== finished quests & what is available now ===');
     'every offered quest has all of its requirements finished',
     open.every((q) => [...q.prev, ...q.lock].every((r) => done.has(r))),
   );
-  check('quests that nothing unlocks are left out', open.every((q) => q.prev.length + q.lock.length > 0));
   check('over the whole graph the frontier is huge, which is why the site scopes it', open.length > 100, `${open.length}`);
+
+  // Regression: 超越时光的情感 needs 影之英雄谭 (a job quest that records no prerequisites of
+  // its own) *and* 水晶的残光 (main scenario). Both must be offered — an earlier version
+  // dropped every quest with no prerequisites, which hid the job quest.
+  {
+    const root = index.get(69521);
+    const view = dependencyClosure(index, root.id, 'prev', false);
+    const marks = impliedDone(new Set([69317]), index); // 指引你迈向明天的是, the main-scenario side
+    const frontier = availableQuests(view, marks)
+      .map((q) => q.id)
+      .sort((a, b) => a - b);
+    console.log(`   ready for 「${root.cn}」:`, frontier.map((id) => index.get(id).cn).join(' | '));
+    check('a view offers every missing prerequisite, not just the quest-chained ones', frontier.join(',') === '69165,69318', frontier.join(','));
+    check('including the one that records no prerequisites of its own', index.get(69165).prev.length === 0 && frontier.includes(69165));
+    check('and the one whose chain is already done is not repeated', !frontier.includes(69317));
+  }
 
   // Scoped to one chain — exactly what the dependency view asks for.
   const followUp = index.get(69478); // 记录“战果记录”, its only prerequisite is the ticked quest

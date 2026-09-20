@@ -148,14 +148,17 @@ export function toggleMarked(marked: Set<number>, id: number, index: Map<number,
  * condition) is in `done` — which must already be the implied set — and the quest itself
  * is not.
  *
- * Quests with no requirements at all are always left out: they are open from the start,
- * so they are not "next" and would flood the answer.
+ * Callers hand in the quests of one dependency view, where every node is on the way to the
+ * root. That matters for quests which record no prerequisites of their own — class and job
+ * quests, or anything gated by level rather than by another quest: inside such a view they
+ * are genuinely required, so they belong in the answer even though nothing "unlocks" them.
+ * (A global call would instead return the ~900 quests that are open from the start, which
+ * is why the site only ever asks this of a view.)
  */
 export function availableQuests(quests: Quest[], done: Set<number>): Quest[] {
   if (!done.size) return [];
   return quests.filter((q) => {
     if (done.has(q.id)) return false;
-    if (!q.prev.length && !q.lock.length) return false;
     for (const p of q.prev) if (!done.has(p)) return false;
     for (const l of q.lock) if (!done.has(l)) return false;
     return true;
