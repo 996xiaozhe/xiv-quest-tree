@@ -360,6 +360,35 @@ console.log('\n=== entry language ===');
   check('index.html falls back to English, not to the Chinese default', /document\.documentElement\.lang = 'en'/.test(html));
 }
 
+console.log('\n=== site icon ===');
+{
+  const html = await readFile('index.html', 'utf8');
+  const svg = await readFile('public/favicon.svg', 'utf8');
+  const css = await readFile('src/styles.css', 'utf8');
+
+  check('index.html links the SVG favicon', /rel="icon"[^>]*favicon\.svg/.test(html));
+  check('index.html links a PNG fallback for Safari', /rel="icon"[^>]*favicon-32\.png/.test(html));
+  check('index.html links an apple-touch-icon for iOS', /rel="apple-touch-icon"[^>]*apple-touch-icon\.png/.test(html));
+  check('the favicon is a well-formed SVG with a viewBox', svg.trimStart().startsWith('<svg') && svg.includes('viewBox="0 0 64 64"') && svg.includes('</svg>'));
+
+  // The mark is drawn with the UI's own colours, so it cannot drift away from the theme.
+  const gold = /--gold:\s*(#[0-9a-f]{6})/i.exec(css)?.[1];
+  const goldBright = /--gold-bright:\s*(#[0-9a-f]{6})/i.exec(css)?.[1];
+  const bg = /--bg:\s*(#[0-9a-f]{6})/i.exec(css)?.[1];
+  check('the favicon uses the UI gold', !!gold && svg.includes(gold), `${gold}`);
+  check('the favicon core uses the UI bright gold', !!goldBright && svg.includes(goldBright), `${goldBright}`);
+  check('the favicon sits on the app background', !!bg && svg.includes(bg), `${bg}`);
+  check('the mark is three flat shapes (no gradients)', !/gradient/i.test(svg), '');
+
+  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  for (const [file, size] of [['public/favicon-32.png', 32], ['public/apple-touch-icon.png', 180]]) {
+    const buf = await readFile(file);
+    const w = buf.length > 24 ? buf.readUInt32BE(16) : 0;
+    const h = buf.length > 24 ? buf.readUInt32BE(20) : 0;
+    check(`${file} is a ${size}x${size} PNG`, buf.subarray(0, 8).equals(PNG_SIG) && w === size && h === size, `${w}x${h}`);
+  }
+}
+
 console.log('\n=== layout ===');
 const t0 = Date.now();
 const layAll = layoutGraph(data.quests, index, { xStep: DEFAULT_X_STEP, yStep: DEFAULT_Y_STEP, isMain: isMainScenario });

@@ -37,6 +37,7 @@ A trilingual (中文 / English / 日本語), zoomable dependency graph of **ever
 - 侧栏含「仅显示主线任务」「显示任务锁（额外解锁条件）」开关。**依赖视图会忽略侧栏筛选**（否则祖先链会被截断），横幅里写明了这一点。
 - 详情面板给出「各语言名称」对照表，并保留 Lodestone 官方链接；底部同样有「查看前置依赖 / 查看后续任务」按钮。
 - 图例分两部分：任务大类配色 + 三种任务类型图标；只列出当前视图中真实出现的任务大类。
+- **站点图标**（浏览器标签页 / 收藏 / iOS 主屏）不是游戏内的任务标记 —— 那些标记在画布上表示「主线 / 支线 / 职业」，拿来当站点图标会被读成一种任务类型。用的是本站自己的节点造型：`public/favicon.svg` 里三个扁平图形（底色圆角方块 + 金色菱形环 + 亮金核心），配色直接取自 UI 的 `--bg` / `--gold` / `--gold-bright`，`npm test` 会断言三者始终一致、且图形里没有渐变。
 
 ---
 
@@ -134,7 +135,11 @@ npm run verify:strings  # 与沙之家三语文本库交叉验证
 npm run graph:ascii     # 在终端里以 ASCII 密度图检查布局形状
 npm run test:dom        # 在 jsdom 里跑真实打包产物，像用户一样驱动界面
 npm run icons:view 71221  # 把任意游戏图标解码成 ASCII 打印出来
+npm run icons:view public/favicon-32.png  # 也可以直接解码本地 PNG
+npm run icons:site      # 从 favicon.svg 的几何重新生成 favicon-32.png / apple-touch-icon.png
 ```
+
+`npm run icons:site` 不依赖任何库：PNG 就是 zlib 外面套一层容器（Node 自带 zlib），图形是三个扁平菱形，于是直接按「点在不在形状里」在 4 倍分辨率上采样再降采样，抗锯齿边缘就是这么来的。`favicon-32.png` 是圆角方块（标签页里好看），`apple-touch-icon.png` 是满幅方块（iOS 会自己套圆角，预先切角反而会露出黑角）。
 
 `npm run graph:ascii all 186 100` 会打印整张图的形状；传任务大类 id 可只看某一部分，加 `--vertical` 可切换主轴线方向。
 
@@ -177,7 +182,10 @@ vercel --prod # 生产
 
 ```
 public/data/quests.json     构建好的数据集（站点运行时加载）
-public/icons/               官方任务类型图标 PNG + 内容框清单
+public/icons/               官方任务类型图标 PNG + 内容框清单（图例 / 悬停卡片）
+public/favicon.svg          站点图标（矢量，浏览器首选）
+public/favicon-32.png       Safari 用的位图回退（由 tools/make-favicon.mjs 生成）
+public/apple-touch-icon.png iOS 主屏图标（180px 满幅方块）
 src/
   types.ts                  数据模型与筛选器类型
   i18n.ts                   中 / 英 / 日 UI 文案
@@ -194,6 +202,7 @@ src/
     QuestDetail.tsx         任务详情（前置 / 后续 / 多语言名称 / Lodestone）
     SearchBar.tsx           三语搜索与跳转
 tools/                      数据抓取、构建、校验、布局与图标检查脚本
+                             （含 make-favicon.mjs：无依赖地把站点图标栅格化成 PNG）
 ```
 
 ---

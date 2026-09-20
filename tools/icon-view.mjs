@@ -76,8 +76,19 @@ function ascii(png, cols = 64) {
   return lines.join('\n');
 }
 
-const ids = process.argv.slice(2).map(Number);
-for (const id of ids) {
+// Usage: `icons:view 71221` fetches that icon from the game's atlas; passing a path
+// instead (e.g. `icons:view public/favicon-32.png`) decodes a local PNG.
+const args = process.argv.slice(2);
+for (const arg of args) {
+  if (!/^\d+$/.test(arg)) {
+    try {
+      const png = decodePng(await readFile(arg));
+      console.log(`\n### ${arg}  ${stats(png)}`);
+      console.log(ascii(png, Number(process.env.COLS || 64)));
+    } catch (e) { console.log(`\n### ${arg}: ERROR ${e.message}`); }
+    continue;
+  }
+  const id = Number(arg);
   const folder = String(Math.floor(id / 1000) * 1000).padStart(6, '0');
   const url = `https://xivapi.com/i/${folder}/${String(id).padStart(6, '0')}.png`;
   try {

@@ -15,6 +15,7 @@
     "graph:ascii": "node tools/layout-ascii.mjs",
     "icons:fetch": "node tools/fetch-icons.mjs",
     "icons:view": "node tools/icon-view.mjs",
+    "icons:site": "node tools/make-favicon.mjs",
     "data:cn": "node tools/fetch-cn-csv.mjs",
     "data:xivapi": "node tools/fetch-xivapi.mjs",
     "data:lodestone": "node tools/fetch-lodestone.mjs",

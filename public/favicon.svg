@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FFXIV Quest Tree">
+  <!--
+    The site mark: one quest node, drawn the way the canvas draws it — a flat diamond
+    with a brighter core — sitting on the app's own night background. Deliberately not an
+    in-game quest marker: the marker icons mean "main / side / job quest" on the canvas,
+    so reusing one as the site icon would read as a statement about a quest type.
+
+    Kept to three flat shapes so it stays legible at 16px, where a thin double ring turns
+    to mush. public/favicon-32.png and public/apple-touch-icon.png are rasterised from
+    this exact geometry by tools/make-favicon.mjs.
+  -->
+  <rect width="64" height="64" rx="15" fill="#070a0f" />
+  <path d="M32 8 56 32 32 56 8 32Z" fill="#d9b877" />
+  <path d="M32 20 44 32 32 44 20 32Z" fill="#070a0f" />
+  <path d="M32 26 38 32 32 38 26 32Z" fill="#f4e0ac" />
+</svg>
