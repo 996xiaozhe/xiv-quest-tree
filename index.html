@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0d12" />
+    <title>FFXIV 任务树 · Quest Tree</title>
+    <meta
+      name="description"
+      content="最终幻想14 全任务依赖树 — 前置/后续任务、主分类与子分类筛选、中英日三语查询。FINAL FANTASY XIV quest dependency tree with trilingual support."
+    />
+    <script>
+      /* Applied before first paint so a day-theme visitor never sees a flash of the
+         night palette. Mirrors initialTheme() in src/App.tsx. */
+      (function () {
+        try {
+          var t = localStorage.getItem('xiv-quest-tree:theme');
+          if (t !== 'day' && t !== 'night') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'day' : 'night';
+          }
+          document.documentElement.dataset.theme = t;
+          if (t === 'day') {
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) m.setAttribute('content', '#f7f3e9');
+          }
+        } catch (e) {
+          /* private mode / disabled storage: fall back to the stylesheet default */
+        }
+      })();
+
+      /* Resolve the UI language before first paint so <html lang> is right from the
+         start, both for screen readers and for initialLang() in src/App.tsx (which
+         reads the attribute back). Mirrors chooseLang() in src/i18n.ts: the saved
+         choice wins, then the browser's language list, and an unsupported language
+         falls back to English rather than to the Chinese default below. */
+      (function () {
+        var html = { cn: 'zh-Hans', en: 'en', ja: 'ja' };
+        var primary = { zh: 'zh-Hans', ja: 'ja', en: 'en' };
+        var saved = null;
+        try {
+          saved = localStorage.getItem('xiv-quest-tree:lang');
+        } catch (e) {
+          /* storage disabled: detect from the browser instead */
+        }
+        if (saved && html[saved]) {
+          document.documentElement.lang = html[saved];
+          return;
+        }
+        var tags = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+        for (var i = 0; i < tags.length; i++) {
+          var p = String(tags[i] || '').toLowerCase().split(/[-_]/)[0];
+          if (primary[p]) {
+            document.documentElement.lang = primary[p];
+            return;
+          }
+        }
+        document.documentElement.lang = 'en';
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

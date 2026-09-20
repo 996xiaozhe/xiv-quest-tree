@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-test/
+.npm-cache/
+*.tsbuildinfo
+*.tmpdir/
+
+# Raw upstream data (~45 MB) — regenerate with `npm run data:all`
+data-src/
+
+# Tooling scratch
+*.log
+.edge-profile*/
+preview-*.png

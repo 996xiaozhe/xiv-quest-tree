@@ -1,0 +1,32 @@
+[
+  {
+    "id": 71201,
+    "note": "main scenario (EventIconType 3)",
+    "size": "96x96",
+    "minX": 11,
+    "minY": 3,
+    "w": 77,
+    "h": 81,
+    "bytes": 14826
+  },
+  {
+    "id": 71221,
+    "note": "sidequest (EventIconType 1)",
+    "size": "96x96",
+    "minX": 15,
+    "minY": 9,
+    "w": 65,
+    "h": 83,
+    "bytes": 12006
+  },
+  {
+    "id": 71341,
+    "note": "class & job (EventIconType 8 / 10)",
+    "size": "96x96",
+    "minX": 3,
+    "minY": 9,
+    "w": 77,
+    "h": 83,
+    "bytes": 12744
+  }
+]

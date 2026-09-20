@@ -1,0 +1,362 @@
+import type { Lang } from './types.ts';
+import { LANGS } from './types.ts';
+
+type Dict = Record<string, string>;
+
+/** BCP-47 primary subtag → one of the three UI languages. Anything else is unsupported. */
+const PRIMARY_LANG: Record<string, Lang> = { zh: 'cn', ja: 'ja', en: 'en' };
+
+/** The first supported language in a list of BCP-47 tags, or null if none is supported. */
+export function firstSupportedLang(tags: readonly (string | null | undefined)[]): Lang | null {
+  for (const tag of tags) {
+    const primary = String(tag ?? '').trim().toLowerCase().split(/[-_]/)[0];
+    const hit = PRIMARY_LANG[primary];
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Which language the site opens in, in priority order:
+ *
+ *   1. the visitor's own last choice (`localStorage`), which always wins;
+ *   2. the browser's language list — the live signal;
+ *   3. the `lang` attribute the pre-paint script in index.html already resolved;
+ *   4. English, so a visitor whose language the site does not speak still gets a
+ *      readable UI instead of the Chinese default baked into the HTML.
+ */
+export function chooseLang(opts: {
+  saved?: string | null;
+  browserLangs?: readonly (string | null | undefined)[];
+  htmlLang?: string | null;
+}): Lang {
+  const saved = opts.saved;
+  if (saved && (LANGS as readonly string[]).includes(saved)) return saved as Lang;
+  return firstSupportedLang(opts.browserLangs ?? []) ?? firstSupportedLang([opts.htmlLang]) ?? 'en';
+}
+
+const zh: Dict = {
+  'app.title': '最终幻想14 任务树',
+  'app.subtitle': '全任务依赖关系 · 前置与后续 · 中英日三语',
+  'app.loading': '正在载入任务数据…',
+  'app.loadError': '任务数据载入失败',
+
+  'lang.label': '语言',
+  'theme.day': '日间',
+  'theme.night': '夜间',
+  'theme.toDay': '切换到日间视图',
+  'theme.toNight': '切换到夜间视图',
+
+  'search.placeholder': '搜索任务（中文 / English / 日本語）…',
+  'search.empty': '未找到匹配的任务',
+  'search.hint': '输入任务名称以搜索并跳转',
+  'search.results': '共 {n} 个结果',
+
+  'filter.title': '筛选',
+  'filter.expansion': '资料片',
+  'filter.section': '任务大类',
+  'filter.category': '主分类',
+  'filter.genre': '子分类',
+  'filter.level': '等级',
+  'filter.patch': '版本',
+  'filter.showLocks': '显示任务锁（额外解锁条件）',
+  'filter.clear': '清除全部筛选',
+  'filter.clearGroup': '清除',
+  'filter.all': '全部',
+  'preset.main': '主线任务',
+  'filter.selectedCount': '已选 {n} 项',
+  'filter.noneSelected': '未选择',
+  'filter.searchCategory': '筛选分类…',
+  'filter.more': '展开其余 {n} 项',
+  'filter.less': '收起',
+
+  'view.zoomIn': '放大',
+  'view.zoomOut': '缩小',
+  'view.fit': '适应窗口',
+  'view.reset': '重置视图',
+  'view.centerMain': '定位到主线',
+  'view.showLocks': '显示任务锁',
+  'view.compass': '操作：拖拽移动 · 滚轮缩放 · 点击查看详情',
+
+  'stats.quests': '任务',
+  'stats.links': '依赖',
+  'stats.visible': '当前显示',
+  'stats.ranks': '层级',
+
+  'panel.empty': '点击图中的任务节点查看详细信息',
+  'panel.basic': '基本信息',
+  'panel.patch': '变更版本',
+  'panel.expansion': '资料片',
+  'panel.region': '所属地区',
+  'panel.section': '任务大类',
+  'panel.category': '主分类',
+  'panel.genre': '子分类',
+  'panel.job': '职业',
+  'panel.level': '等级',
+  'panel.startNpc': '开始NPC',
+  'panel.endNpc': '结束NPC',
+  'panel.prev': '前置任务',
+  'panel.next': '后续任务',
+  'panel.lock': '额外解锁条件',
+  'panel.rewards': '奖励',
+  'panel.exp': '经验值',
+  'panel.gil': '金币',
+  'panel.names': '各语言名称',
+  'panel.lodestone': 'Lodestone',
+  'panel.wiki': '灰机 Wiki',
+  'panel.links': '外部链接',
+  'panel.repeatable': '可重复接取',
+  'panel.none': '无',
+  'panel.coords': '坐标',
+  'panel.and': '需全部完成',
+  'panel.or': '任选其一完成',
+  'panel.focus': '以此任务为中心查看',
+  'panel.related': '相关任务',
+  'panel.levelShort': '{n} 级',
+
+  'legend.title': '图例',
+  'legend.markers': '任务类型',
+  'legend.edge': '前置 → 后续',
+  'legend.edgeLock': '任务锁',
+  'legend.main': '主线任务',
+  'legend.markerMain': '主线任务',
+  'legend.markerSide': '支线 / 一般任务',
+  'legend.markerJob': '职业任务',
+
+  'menu.prereq': '查看前置依赖',
+  'menu.next': '查看后续任务',
+  'menu.focus': '以此任务为中心',
+  'dep.title': '依赖视图',
+  'dep.prev': '「{name}」的全部前置任务',
+  'dep.next': '「{name}」的全部后续任务',
+  'dep.count': '共 {n} 个任务',
+  'dep.hint': '依赖视图会忽略左侧筛选',
+  'dep.exit': '退出依赖视图',
+  'dep.copy': '复制链接',
+  'dep.copied': '已复制',
+
+  'route.tag': '链接',
+  'route.notFound': '链接中的任务「{name}」未找到',
+  'route.dismiss': '关闭',
+};
+
+const en: Dict = {
+  'app.title': 'FFXIV Quest Tree',
+  'app.subtitle': 'Every quest and its dependencies · trilingual · zoomable',
+  'app.loading': 'Loading quest data…',
+  'app.loadError': 'Failed to load quest data',
+
+  'lang.label': 'Language',
+  'theme.day': 'Day',
+  'theme.night': 'Night',
+  'theme.toDay': 'Switch to the day view',
+  'theme.toNight': 'Switch to the night view',
+
+  'search.placeholder': 'Search quests (English / 中文 / 日本語)…',
+  'search.empty': 'No matching quest',
+  'search.hint': 'Type a quest name to search and jump to it',
+  'search.results': '{n} results',
+
+  'filter.title': 'Filters',
+  'filter.expansion': 'Expansion',
+  'filter.section': 'Quest group',
+  'filter.category': 'Category',
+  'filter.genre': 'Subcategory',
+  'filter.level': 'Level',
+  'filter.patch': 'Patch',
+  'filter.showLocks': 'Show quest locks (extra requirements)',
+  'filter.clear': 'Clear all filters',
+  'filter.clearGroup': 'clear',
+  'filter.all': 'All',
+  'preset.main': 'Main scenario',
+  'filter.selectedCount': '{n} selected',
+  'filter.noneSelected': 'none selected',
+  'filter.searchCategory': 'Filter categories…',
+  'filter.more': 'Show {n} more',
+  'filter.less': 'Show less',
+
+  'view.zoomIn': 'Zoom in',
+  'view.zoomOut': 'Zoom out',
+  'view.fit': 'Fit to screen',
+  'view.reset': 'Reset view',
+  'view.centerMain': 'Center on main scenario',
+  'view.showLocks': 'Quest locks',
+  'view.compass': 'Drag to pan · scroll to zoom · click a node for details',
+
+  'stats.quests': 'Quests',
+  'stats.links': 'Links',
+  'stats.visible': 'Shown',
+  'stats.ranks': 'Levels',
+
+  'panel.empty': 'Click a quest node in the graph to see its details',
+  'panel.basic': 'Basic info',
+  'panel.patch': 'Patch',
+  'panel.expansion': 'Expansion',
+  'panel.region': 'Region',
+  'panel.section': 'Quest group',
+  'panel.category': 'Category',
+  'panel.genre': 'Subcategory',
+  'panel.job': 'Class / Job',
+  'panel.level': 'Level',
+  'panel.startNpc': 'Starting NPC',
+  'panel.endNpc': 'Ending NPC',
+  'panel.prev': 'Prerequisites',
+  'panel.next': 'Follow-up quests',
+  'panel.lock': 'Additional requirements',
+  'panel.rewards': 'Rewards',
+  'panel.exp': 'Experience',
+  'panel.gil': 'Gil',
+  'panel.names': 'Names in all languages',
+  'panel.lodestone': 'Lodestone',
+  'panel.wiki': 'Huiji Wiki',
+  'panel.links': 'External links',
+  'panel.repeatable': 'Repeatable',
+  'panel.none': 'None',
+  'panel.coords': 'Coords',
+  'panel.and': 'all required',
+  'panel.or': 'any one of',
+  'panel.focus': 'Focus on this quest',
+  'panel.related': 'Related quests',
+  'panel.levelShort': 'Lv. {n}',
+
+  'legend.title': 'Legend',
+  'legend.markers': 'Quest types',
+  'legend.edge': 'prerequisite → follow-up',
+  'legend.edgeLock': 'quest lock',
+  'legend.main': 'Main scenario',
+  'legend.markerMain': 'Main scenario',
+  'legend.markerSide': 'Sidequest',
+  'legend.markerJob': 'Class & job',
+
+  'menu.prereq': 'View prerequisites',
+  'menu.next': 'View follow-ups',
+  'menu.focus': 'Center on this quest',
+  'dep.title': 'Dependency view',
+  'dep.prev': 'Every prerequisite of “{name}”',
+  'dep.next': 'Every follow-up of “{name}”',
+  'dep.count': '{n} quests',
+  'dep.hint': 'the sidebar filters are ignored here',
+  'dep.exit': 'Exit dependency view',
+  'dep.copy': 'Copy link',
+  'dep.copied': 'Copied',
+
+  'route.tag': 'Link',
+  'route.notFound': 'No quest named “{name}” in this link',
+  'route.dismiss': 'Dismiss',
+};
+
+const ja: Dict = {
+  'app.title': 'FF14 クエストツリー',
+  'app.subtitle': '全クエストの依存関係 · 前提/後続 · 中日英対応',
+  'app.loading': 'クエストデータを読み込み中…',
+  'app.loadError': 'クエストデータの読み込みに失敗しました',
+
+  'lang.label': '言語',
+  'theme.day': 'デイ',
+  'theme.night': 'ナイト',
+  'theme.toDay': 'デイビューに切り替え',
+  'theme.toNight': 'ナイトビューに切り替え',
+
+  'search.placeholder': 'クエストを検索（日本語 / 中文 / English）…',
+  'search.empty': '該当するクエストがありません',
+  'search.hint': 'クエスト名を入力して検索・ジャンプ',
+  'search.results': '{n} 件',
+
+  'filter.title': '絞り込み',
+  'filter.expansion': '拡張パッケージ',
+  'filter.section': '大分類',
+  'filter.category': 'カテゴリ',
+  'filter.genre': 'サブカテゴリ',
+  'filter.level': 'レベル',
+  'filter.patch': 'パッチ',
+  'filter.showLocks': 'クエストロックを表示',
+  'filter.clear': 'すべて解除',
+  'filter.clearGroup': '解除',
+  'filter.all': 'すべて',
+  'preset.main': 'メインクエスト',
+  'filter.selectedCount': '{n} 件選択',
+  'filter.noneSelected': '未選択',
+  'filter.searchCategory': 'カテゴリを絞り込み…',
+  'filter.more': '残り {n} 件を表示',
+  'filter.less': '折りたたむ',
+
+  'view.zoomIn': '拡大',
+  'view.zoomOut': '縮小',
+  'view.fit': '全体表示',
+  'view.reset': '表示をリセット',
+  'view.centerMain': 'メインクエストへ移動',
+  'view.showLocks': 'クエストロック',
+  'view.compass': 'ドラッグで移動 · ホイールで拡大縮小 · クリックで詳細',
+
+  'stats.quests': 'クエスト',
+  'stats.links': '依存関係',
+  'stats.visible': '表示中',
+  'stats.ranks': '階層',
+
+  'panel.empty': 'グラフ内のクエストをクリックすると詳細が表示されます',
+  'panel.basic': '基本情報',
+  'panel.patch': '実装パッチ',
+  'panel.expansion': '拡張',
+  'panel.region': 'エリア',
+  'panel.section': '大分類',
+  'panel.category': 'カテゴリ',
+  'panel.genre': 'サブカテゴリ',
+  'panel.job': 'クラス/ジョブ',
+  'panel.level': 'レベル',
+  'panel.startNpc': '開始NPC',
+  'panel.endNpc': '終了NPC',
+  'panel.prev': '前提クエスト',
+  'panel.next': '後続クエスト',
+  'panel.lock': '追加条件',
+  'panel.rewards': '報酬',
+  'panel.exp': '経験値',
+  'panel.gil': 'ギル',
+  'panel.names': '各言語の名称',
+  'panel.lodestone': 'Lodestone',
+  'panel.wiki': '灰机 Wiki',
+  'panel.links': '外部リンク',
+  'panel.repeatable': 'リピート可能',
+  'panel.none': 'なし',
+  'panel.coords': '座標',
+  'panel.and': 'すべて必要',
+  'panel.or': 'いずれか1つ',
+  'panel.focus': 'このクエストを中心に表示',
+  'panel.related': '関連クエスト',
+  'panel.levelShort': 'Lv. {n}',
+
+  'legend.title': '凡例',
+  'legend.markers': 'クエスト種別',
+  'legend.edge': '前提 → 後続',
+  'legend.edgeLock': 'クエストロック',
+  'legend.main': 'メインクエスト',
+  'legend.markerMain': 'メインクエスト',
+  'legend.markerSide': 'サブクエスト',
+  'legend.markerJob': 'クラス/ジョブ',
+
+  'menu.prereq': '前提クエストを表示',
+  'menu.next': '後続クエストを表示',
+  'menu.focus': 'このクエストを中心に',
+  'dep.title': '依存ビュー',
+  'dep.prev': '「{name}」の前提クエストをすべて表示',
+  'dep.next': '「{name}」の後続クエストをすべて表示',
+  'dep.count': '{n} 件',
+  'dep.hint': '左側の絞り込みは適用されません',
+  'dep.exit': '依存ビューを終了',
+  'dep.copy': 'リンクをコピー',
+  'dep.copied': 'コピーしました',
+
+  'route.tag': 'リンク',
+  'route.notFound': 'リンクのクエスト「{name}」が見つかりません',
+  'route.dismiss': '閉じる',
+};
+
+export const MESSAGES: Record<Lang, Dict> = { cn: zh, en, ja };
+
+export function translate(lang: Lang, key: string, vars?: Record<string, string | number>): string {
+  let s = MESSAGES[lang][key] ?? MESSAGES.en[key] ?? key;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+  return s;
+}
+
+export const LANG_LABEL: Record<Lang, string> = { cn: '中文', en: 'English', ja: '日本語' };
+export const LANG_SHORT: Record<Lang, string> = { cn: '中', en: 'EN', ja: '日' };
