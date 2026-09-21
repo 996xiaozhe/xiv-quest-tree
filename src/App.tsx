@@ -629,19 +629,21 @@ export default function App() {
           ) : null}
 
           <div className="stage-tools">
-            <button type="button" title={t('view.zoomIn')} onClick={() => graphRef.current?.zoomBy(1.35)}>
-              +
-            </button>
-            <button type="button" title={t('view.zoomOut')} onClick={() => graphRef.current?.zoomBy(1 / 1.35)}>
-              −
-            </button>
+            <div className="zoom-controls">
+              <button type="button" title={t('view.zoomIn')} onClick={() => graphRef.current?.zoomBy(1.35)}>
+                +
+              </button>
+              <button type="button" title={t('view.zoomOut')} onClick={() => graphRef.current?.zoomBy(1 / 1.35)}>
+                −
+              </button>
+            </div>
             <button type="button" className="wide" onClick={() => graphRef.current?.fit()}>
               {t('view.fit')}
             </button>
-            <button type="button" className="wide" onClick={() => graphRef.current?.centerMain()}>
+            <button type="button" className="wide mobile-hide" onClick={() => graphRef.current?.centerMain()}>
               {t('view.centerMain')}
             </button>
-            <label className="tools-toggle" title={t('filter.showLocks')}>
+            <label className="tools-toggle mobile-hide" title={t('filter.showLocks')}>
               <input
                 type="checkbox"
                 checked={filters.showLocks}

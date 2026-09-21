@@ -1062,6 +1062,10 @@ input {
   gap: 5px;
   align-items: stretch;
 }
+.zoom-controls {
+  display: flex;
+  gap: 5px;
+}
 .stage-tools button {
   width: 48px;
   height: 40px;
@@ -2066,6 +2070,11 @@ input {
 }
 
 @media (max-width: 780px) {
+  /* The desktop type scale starts at 19px. A 16.5px root keeps labels and quest details
+     comfortably readable on a phone without crowding the three stacked panels. */
+  html {
+    font-size: 16.5px;
+  }
   .topbar {
     height: auto;
     flex-wrap: wrap;
@@ -2084,14 +2093,16 @@ input {
     width: 100%;
   }
   .body {
+    --mobile-filter-height: 116px;
+    --mobile-detail-height: max(220px, 38%);
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(158px, 27%) minmax(0, 1fr) minmax(220px, 38%);
+    grid-template-rows: var(--mobile-filter-height) minmax(0, 1fr) var(--mobile-detail-height);
   }
   .body.left-collapsed {
-    grid-template-rows: 0 minmax(0, 1fr) minmax(220px, 38%);
+    grid-template-rows: 0 minmax(0, 1fr) var(--mobile-detail-height);
   }
   .body.right-collapsed {
-    grid-template-rows: minmax(158px, 27%) minmax(0, 1fr) 0;
+    grid-template-rows: var(--mobile-filter-height) minmax(0, 1fr) 0;
   }
   .body.left-collapsed.right-collapsed {
     grid-template-rows: 0 minmax(0, 1fr) 0;
@@ -2102,20 +2113,10 @@ input {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-  /* Filters become a shallow, horizontally scrollable strip above the graph. */
+  /* For now the phone layout keeps only the high-value quick presets. The deeper
+     category lists stay available on wider screens and can return here later. */
   .sidebar-scroll {
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 4px 0 6px;
-  }
-  .fgroup {
-    flex: 0 0 230px;
-    padding-bottom: 7px;
-  }
-  .fgroup-search {
-    height: 32px;
-    min-height: 32px;
+    display: none;
   }
   .clear-all {
     display: none;
@@ -2138,7 +2139,7 @@ input {
   /* On a phone these become vertical drawer handles at the seams between the three
      stacked regions. The open/closed arrows turn with their respective drawers. */
   .sidebar-toggle-left {
-    top: calc(max(158px, 27%) - 1px);
+    top: calc(var(--mobile-filter-height) - 1px);
     right: 0;
     bottom: auto;
     left: auto;
@@ -2152,7 +2153,7 @@ input {
   .sidebar-toggle-right {
     top: auto;
     right: 0;
-    bottom: calc(max(220px, 38%) - 1px);
+    bottom: calc(var(--mobile-detail-height) - 1px);
     left: auto;
   }
   .right-collapsed .sidebar-toggle-right {
@@ -2161,9 +2162,14 @@ input {
   .sidebar-toggle-right svg {
     transform: rotate(90deg);
   }
+  .stage-tools .mobile-hide {
+    display: none;
+  }
   .stage-stats .hint {
     display: none;
   }
+  /* The full legend is useful on a wide canvas, but consumes too much of a phone's
+     limited graph area. */
   .legend {
     display: none;
   }
