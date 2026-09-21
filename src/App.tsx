@@ -120,6 +120,8 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [selected, setSelected] = useState<number | null>(null);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [matches, setMatches] = useState<Set<number>>(new Set());
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [dependency, setDependency] = useState<DependencyView | null>(null);
@@ -315,6 +317,7 @@ export default function App() {
   const jumpTo = useCallback(
     (id: number, scale = 0.95) => {
       setSelected(id);
+      setRightCollapsed(false);
       // Inside a /pre or /post view the chips in the detail panel are almost always part
       // of that ancestry, so clicking one moves the camera to it and stays in the view
       // the user is reading. Only a quest outside the view (a follow-up while looking at
@@ -377,6 +380,7 @@ export default function App() {
       setRouteMiss(null);
       setDependency({ root, dir });
       setSelected(root);
+      setRightCollapsed(false);
       depFocus(root, dir);
     },
     [depFocus],
@@ -417,6 +421,12 @@ export default function App() {
 
   // Stable identities so the memoised panels do not re-render needlessly.
   const handleJump = useCallback((id: number) => jumpTo(id), [jumpTo]);
+  // A graph selection is also the explicit request to inspect its task, so reveal the
+  // detail panel when it had been tucked away.
+  const handleSelect = useCallback((id: number | null) => {
+    setSelected(id);
+    if (id != null) setRightCollapsed(false);
+  }, []);
   const handleContextMenu = useCallback((id: number, x: number, y: number) => setMenu({ id, x, y }), []);
 
   const selectedQuest = selected != null ? index.get(selected) ?? null : null;
@@ -524,7 +534,9 @@ export default function App() {
         </div>
       </header>
 
-      <div className="body">
+      <div
+        className={'body' + (leftCollapsed ? ' left-collapsed' : '') + (rightCollapsed ? ' right-collapsed' : '')}
+      >
         <Sidebar
           taxo={taxo}
           t={t}
@@ -540,7 +552,7 @@ export default function App() {
             nodes={visible}
             index={index}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={handleSelect}
             onNodeContextMenu={handleContextMenu}
             highlight={highlight}
             matches={matches}
@@ -760,6 +772,29 @@ export default function App() {
           done={selected != null && done.has(selected)}
           onToggleDone={toggleDone}
         />
+
+        <button
+          type="button"
+          className="sidebar-toggle sidebar-toggle-left"
+          onClick={() => setLeftCollapsed((collapsed) => !collapsed)}
+          aria-label={leftCollapsed ? '展开筛选侧栏' : '收起筛选侧栏'}
+          title={leftCollapsed ? '展开筛选侧栏' : '收起筛选侧栏'}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+            <path d={leftCollapsed ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6'} />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="sidebar-toggle sidebar-toggle-right"
+          onClick={() => setRightCollapsed((collapsed) => !collapsed)}
+          aria-label={rightCollapsed ? '展开任务信息' : '收起任务信息'}
+          title={rightCollapsed ? '展开任务信息' : '收起任务信息'}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+            <path d={rightCollapsed ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />
+          </svg>
+        </button>
       </div>
     </div>
   );

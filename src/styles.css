@@ -730,14 +730,24 @@ input {
 /* ------------------------------------------------------------------ body -- */
 
 .body {
+  --sidebar-width: 356px;
+  --detail-width: 428px;
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: 356px minmax(0, 1fr) 428px;
+  position: relative;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--detail-width);
   /* Without an explicit row track the single row is auto-sized to its tallest item,
      so a growing sidebar used to stretch the whole layout. Pin it to the container. */
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
+  transition: grid-template-columns 180ms ease;
+}
+.body.left-collapsed {
+  --sidebar-width: 0px;
+}
+.body.right-collapsed {
+  --detail-width: 0px;
 }
 
 /* --------------------------------------------------------------- sidebar -- */
@@ -749,6 +759,61 @@ input {
   overflow: hidden;
   border-right: 1px solid var(--line);
   background: var(--pane-a);
+  min-width: 0;
+  transition: opacity 130ms ease;
+}
+.left-collapsed .sidebar,
+.right-collapsed .detail {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 130ms ease, visibility 0s linear 180ms;
+}
+
+/* The handles deliberately sit just beyond their panels, leaving the graph and panel
+   surfaces uncluttered while keeping the collapsed state discoverable. */
+.sidebar-toggle {
+  position: absolute;
+  z-index: 20;
+  top: auto;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--muted);
+  background: var(--pane-a);
+  box-shadow: none;
+  cursor: pointer;
+  transition: left 180ms ease, right 180ms ease, background 150ms ease, border-color 150ms ease;
+}
+.sidebar-toggle:hover {
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--gold) 10%, var(--pane-a));
+  border-color: var(--gold-dim);
+}
+.sidebar-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.sidebar-toggle-left {
+  left: calc(var(--sidebar-width) - 1px);
+}
+.sidebar-toggle-right {
+  right: calc(var(--detail-width) - 1px);
 }
 .sidebar-head {
   display: flex;
@@ -1066,7 +1131,8 @@ input {
 .stage-stats {
   position: absolute;
   left: 12px;
-  bottom: 12px;
+  /* Leave a slim clear lane for the sidebar drawer handles at the bottom edge. */
+  bottom: 36px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1091,7 +1157,7 @@ input {
 .legend {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  bottom: 36px;
   max-width: 270px;
   padding: 11px 14px 12px;
   background: var(--panel-2);
@@ -1204,6 +1270,8 @@ input {
   overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--pane-a);
+  min-width: 0;
+  transition: opacity 130ms ease;
 }
 .detail.empty {
   align-items: center;
@@ -1966,17 +2034,20 @@ input {
 
 @media (max-width: 1400px) {
   .body {
-    grid-template-columns: 320px minmax(0, 1fr) 386px;
+    --sidebar-width: 320px;
+    --detail-width: 386px;
   }
 }
 
 @media (max-width: 1120px) {
   .body {
-    grid-template-columns: 300px minmax(0, 1fr);
+    --sidebar-width: 300px;
+    --detail-width: 0px;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   }
   .detail {
     position: absolute;
-    top: 66px;
+    top: 0;
     right: 0;
     bottom: 0;
     width: 412px;
@@ -1985,6 +2056,12 @@ input {
   }
   .detail.empty {
     display: none;
+  }
+  .sidebar-toggle-right {
+    right: 411px;
+  }
+  .right-collapsed .sidebar-toggle-right {
+    right: -1px;
   }
 }
 
@@ -2007,6 +2084,9 @@ input {
     grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
+    display: none;
+  }
+  .sidebar-toggle-left {
     display: none;
   }
   .stage-stats .hint {
