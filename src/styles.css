@@ -2075,6 +2075,9 @@ input {
   .brand-mark {
     display: none;
   }
+  .topbar-tools {
+    margin-left: auto;
+  }
   .search {
     order: 3;
     max-width: none;
@@ -2082,12 +2085,81 @@ input {
   }
   .body {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(158px, 27%) minmax(0, 1fr) minmax(220px, 38%);
+  }
+  .body.left-collapsed {
+    grid-template-rows: 0 minmax(0, 1fr) minmax(220px, 38%);
+  }
+  .body.right-collapsed {
+    grid-template-rows: minmax(158px, 27%) minmax(0, 1fr) 0;
+  }
+  .body.left-collapsed.right-collapsed {
+    grid-template-rows: 0 minmax(0, 1fr) 0;
   }
   .sidebar {
+    display: flex;
+    grid-row: 1;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  /* Filters become a shallow, horizontally scrollable strip above the graph. */
+  .sidebar-scroll {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0 6px;
+  }
+  .fgroup {
+    flex: 0 0 230px;
+    padding-bottom: 7px;
+  }
+  .fgroup-search {
+    height: 32px;
+    min-height: 32px;
+  }
+  .clear-all {
     display: none;
   }
+  .stage-wrap {
+    grid-row: 2;
+  }
+  .detail {
+    position: static;
+    grid-row: 3;
+    width: auto;
+    z-index: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    box-shadow: none;
+  }
+  .detail.empty {
+    display: flex;
+  }
+  /* On a phone these become vertical drawer handles at the seams between the three
+     stacked regions. The open/closed arrows turn with their respective drawers. */
   .sidebar-toggle-left {
-    display: none;
+    top: calc(max(158px, 27%) - 1px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+  }
+  .left-collapsed .sidebar-toggle-left {
+    top: 0;
+  }
+  .sidebar-toggle-left svg {
+    transform: rotate(-90deg);
+  }
+  .sidebar-toggle-right {
+    top: auto;
+    right: 0;
+    bottom: calc(max(220px, 38%) - 1px);
+    left: auto;
+  }
+  .right-collapsed .sidebar-toggle-right {
+    bottom: 0;
+  }
+  .sidebar-toggle-right svg {
+    transform: rotate(90deg);
   }
   .stage-stats .hint {
     display: none;
