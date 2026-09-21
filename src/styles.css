@@ -2087,6 +2087,9 @@ input {
   .topbar-tools {
     margin-left: auto;
   }
+  .gh-link {
+    display: none;
+  }
   .search {
     order: 3;
     max-width: none;
